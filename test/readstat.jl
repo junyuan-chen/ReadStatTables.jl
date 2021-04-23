@@ -19,7 +19,9 @@
     @test val_label_keys(d)[:mylabl] == "mylabl"
     @test val_label_dict(d)["mylabl"] == d.mylabl.labels
     @test filelabel(d) == "A test file"
-    @test filetimestamp(d) == DateTime(2021, 4, 23, 4, 36, 0)
+    ts = filetimestamp(d)
+    @test minute(ts) == 36
+    @show now()
     @test fileext(d) == ".dta"
 
     @test sprint(show, getmeta(d)) == "ReadStatMeta"
@@ -31,7 +33,7 @@
           value label names:  Dict(:myord => "myord", :mynum => "", :mydate => "", :mychar => "", :dtime => "", :mytime => "", :mylabl => "mylabl")
           value labels:       Dict{String,$(w)Dict{Any,$(w)String}}("myord" => Dict(2 => "medium", 3 => "high", 1 => "low"), "mylabl" => Dict(2 => "Female", 1 => "Male"))
           file label:         A test file
-          file timestamp:     2021-04-23T04:36:00
+          file timestamp:     $(ts)
           file extension:     .dta"""
 
     d = readstat(dta, usecols=Int[])
