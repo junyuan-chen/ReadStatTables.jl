@@ -1,3 +1,16 @@
+@testset "_parse_usecols" begin
+    dta = "$(@__DIR__)/../data/sample.dta"
+    f = read_dta(dta)
+    @test _parse_usecols(f, :dtime) == _parse_usecols(f, "dtime") == (4,)
+    @test_throws ArgumentError _parse_usecols(f, :time)
+    @test _parse_usecols(f, [:dtime]) == _parse_usecols(f, ["dtime"]) == [4]
+    @test_throws ArgumentError _parse_usecols(f, [:time])
+    @test _parse_usecols(f, 1) == (1,)
+    @test_throws ArgumentError _parse_usecols(f, 8)
+    @test _parse_usecols(f, [1, 2]) == 1:2
+    @test_throws ArgumentError _parse_usecols(f, 1:8)
+end
+
 @testset "readstat dta" begin
     dta = "$(@__DIR__)/../data/sample.dta"
     d = readstat(dta)
@@ -21,27 +34,31 @@
     @test filelabel(d) == "A test file"
     ts = filetimestamp(d)
     @test minute(ts) == 36
-    @show now()
     @test fileext(d) == ".dta"
 
     @test sprint(show, getmeta(d)) == "ReadStatMeta"
     w = VERSION < v"1.6.0-DEV" ? "" : " "
     @test sprint(show, MIME("text/plain"), getmeta(d)) == """
         ReadStatMeta:
-          variable labels:    Dict(:myord => "ordinal", :mynum => "numeric", :mydate => "date", :mychar => "character", :dtime => "datetime", :mytime => "time", :mylabl => "labeled")
-          variable formats:   Dict(:myord => "%16.0f", :mynum => "%16.2f", :mydate => "%td", :mychar => "%-1s", :dtime => "%tc", :mytime => "%tcHH:MM:SS", :mylabl => "%16.0f")
-          value label names:  Dict(:myord => "myord", :mynum => "", :mydate => "", :mychar => "", :dtime => "", :mytime => "", :mylabl => "mylabl")
-          value labels:       Dict{String,$(w)Dict{Any,$(w)String}}("myord" => Dict(2 => "medium", 3 => "high", 1 => "low"), "mylabl" => Dict(2 => "Female", 1 => "Male"))
+          variable labels:    Dict(:myord => "ordinal",$(w):mynum => "numeric",$(w):mydate => "date",$(w):mychar => "character",$(w):dtime => "datetime",$(w):mytime => "time",$(w):mylabl => "labeled")
+          variable formats:   Dict(:myord => "%16.0f",$(w):mynum => "%16.2f",$(w):mydate => "%td",$(w):mychar => "%-1s",$(w):dtime => "%tc",$(w):mytime => "%tcHH:MM:SS",$(w):mylabl => "%16.0f")
+          value label names:  Dict(:myord => "myord",$(w):mynum => "",$(w):mydate => "",$(w):mychar => "",$(w):dtime => "",$(w):mytime => "",$(w):mylabl => "mylabl")
+          value labels:       Dict{String,$(w)Dict{Any,$(w)String}}("myord" => Dict(2 => "medium",$(w)3 => "high",$(w)1 => "low"),$(w)"mylabl" => Dict(2 => "Female",$(w)1 => "Male"))
           file label:         A test file
           file timestamp:     $(ts)
           file extension:     .dta"""
+
+    df = DataFrame(d)
+    @test all(n->isequal(df[!, n], getproperty(d, n)), columnnames(d))
+    df = DataFrame(d, copycols=false)
+    @test all(n->df[!, n] === getproperty(d, n), columnnames(d))
 
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
     @test isempty(varlabels(d))
     @test length(val_label_dict(d)) == 2
 
-    d = readstat(dta, usecols=1:3)
+    d = readstat(dta, usecols=1:3, convert_datetime=3)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
         5×3 ReadStatTable:
          Row │ mychar    mynum      mydate
@@ -53,7 +70,7 @@
            4 │      d     -1.4  1583-01-01
            5 │      e   1000.3     missing"""
 
-    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false, apply_value_labels=false)
+    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false, apply_value_labels=10:20)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
         5×2 ReadStatTable:
          Row │       dtime  mylabl
@@ -88,7 +105,9 @@
            2 │         medium
            3 │           high
            4 │            low
-           5 │        missing"""
+           5 │              0"""
+    
+    @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
 end
 
 @testset "readstat sav" begin

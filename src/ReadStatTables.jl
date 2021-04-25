@@ -6,7 +6,12 @@ using PrettyTables: pretty_table
 using ReadStat: read_data_file
 using Tables
 
+import DataAPI: refarray, unwrap
 import PrettyTables: compact_type_str
+import Tables: columnnames
+
+export refarray, unwrap
+export columnnames
 
 export LabeledValue,
        LabeledArray,
@@ -21,9 +26,6 @@ export LabeledValue,
        fileext,
        ReadStatTable,
        getmeta,
-       ncol,
-       nrow,
-       columnnames,
 
        readstat
 

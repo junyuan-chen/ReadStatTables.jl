@@ -11,7 +11,7 @@ const ColumnSelector = Union{ColumnIndex, AbstractVector{<:Union{ColumnIndex}}}
 
 function _parse_usecols(file, usecols::Union{Symbol, String})
     c = findfirst(x->x==Symbol(usecols), file.headers)
-    c === nothing && throw(ArgumentError("column name $c is not found"))
+    c === nothing && throw(ArgumentError("column name $usecols is not found"))
     return (c,)
 end
 
@@ -77,7 +77,8 @@ function readstat(filename::AbstractString;
         missingvalue=missing)
 
     ext = lowercase(splitext(filename)[2])
-    filetype = extmap[ext]
+    filetype = get(extmap, ext, nothing)
+    filetype === nothing && throw(ArgumentError("file extension $ext is not supported"))
     file = read_data_file(filename, filetype)
     if usecols === nothing
         icols = 1:length(file.data)
@@ -117,7 +118,6 @@ function readstat(filename::AbstractString;
             lblname = file.val_label_keys[c]
             if lblname != ""
                 lbls = convert(Dict{eltype(col), String}, file.val_label_dict[lblname])
-                hasmissing && (lbls[missingvalue] = "missing")
                 col = LabeledArray(col, lbls)
             end
         end

@@ -16,8 +16,6 @@
     cols = AbstractVector[c1, c2]
     names = [:c1, :c2]
     tb = ReadStatTable(cols, names)
-    @test ncol(tb) == 2
-    @test nrow(tb) == 10
     @test size(tb) == (10, 2)
     @test size(tb, 1) == 10
     @test_throws ArgumentError size(tb, 3)
@@ -26,8 +24,8 @@
 
     @test Tables.getcolumn(tb, 1) === c1
     @test Tables.getcolumn(tb, :c2) === c2
-    @test Tables.columnnames(tb) == names
-    @test Tables.columnnames(tb) !== names
+    @test columnnames(tb) == names
+    @test columnnames(tb) !== names
 
     @test Tables.schema(tb) == Tables.Schema{(:c1, :c2), Tuple{Int, Float64}}()
     @test Tables.columnindex(tb, :c1) == 1
