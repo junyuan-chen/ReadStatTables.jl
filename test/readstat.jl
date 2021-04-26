@@ -37,16 +37,9 @@ end
     @test fileext(d) == ".dta"
 
     @test sprint(show, getmeta(d)) == "ReadStatMeta"
-    w = VERSION < v"1.6.0-DEV" ? "" : " "
-    @test sprint(show, MIME("text/plain"), getmeta(d)) == """
-        ReadStatMeta:
-          variable labels:    Dict(:myord => "ordinal",$(w):mynum => "numeric",$(w):mydate => "date",$(w):mychar => "character",$(w):dtime => "datetime",$(w):mytime => "time",$(w):mylabl => "labeled")
-          variable formats:   Dict(:myord => "%16.0f",$(w):mynum => "%16.2f",$(w):mydate => "%td",$(w):mychar => "%-1s",$(w):dtime => "%tc",$(w):mytime => "%tcHH:MM:SS",$(w):mylabl => "%16.0f")
-          value label names:  Dict(:myord => "myord",$(w):mynum => "",$(w):mydate => "",$(w):mychar => "",$(w):dtime => "",$(w):mytime => "",$(w):mylabl => "mylabl")
-          value labels:       Dict{String,$(w)Dict{Any,$(w)String}}("myord" => Dict(2 => "medium",$(w)3 => "high",$(w)1 => "low"),$(w)"mylabl" => Dict(2 => "Female",$(w)1 => "Male"))
-          file label:         A test file
-          file timestamp:     $(ts)
-          file extension:     .dta"""
+    ss = sprint(show, MIME("text/plain"), getmeta(d))
+    @test first(ss, 40) == "ReadStatMeta:\n  variable labels:    Dict"
+    @test last(ss, 27) == "\n  file extension:     .dta"
 
     df = DataFrame(d)
     @test all(n->isequal(df[!, n], getproperty(d, n)), columnnames(d))

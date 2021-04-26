@@ -17,6 +17,7 @@ export LabeledValue,
        LabeledArray,
        labels,
 
+       ReadStatMeta,
        varlabels,
        varformats,
        val_label_keys,
@@ -27,6 +28,8 @@ export LabeledValue,
        ReadStatTable,
        getmeta,
 
+       ColumnIndex,
+       ColumnSelector,
        readstat
 
 include("LabeledArrays.jl")

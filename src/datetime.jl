@@ -62,6 +62,17 @@ const dt_formats = Dict{Val, Dict}(
     Val(:xport) => sas_dt_formats
 )
 
+"""
+    parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period)
+    parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period, missingvalue)
+
+Construct a vector of time values of type `DateTime` or `Date`
+by interpreting the elements in `col` as the number of periods passed
+since `epoch` with the length of each period being `delta`.
+If `missingvalue` is specified,
+indices where the elements in `col` are equal to `missingvalue` based on `isequal`
+are set to be `missing` no matter what is specified with `missingvalue`.
+"""
 function parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period)
     out = Vector{typeof(epoch)}(undef, length(col))
     @inbounds for i in eachindex(col)

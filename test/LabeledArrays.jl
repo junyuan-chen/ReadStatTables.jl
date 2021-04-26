@@ -19,7 +19,7 @@
     @test v1 == "a"
     @test "a" == v1
     @test isequal(v1 == missing, missing)
-    @test isequal(missing, v1 == missing)
+    @test isequal(missing, missing == v1)
     @test isequal(v1, 1)
     @test isequal(1, v1)
     @test isequal(v4, missing)
@@ -35,7 +35,7 @@
 
     @test sprint(show, v1) == "a"
     @test sprint(show, v4) == "missing"
-    @test sprint(show, MIME("text/plain"), v1) == "1 => a\n"
+    @test sprint(show, MIME("text/plain"), v1) == "1 => a"
 
     @test convert(String, v1) == "a"
 end
@@ -47,10 +47,12 @@ end
     @test eltype(x) == LabeledValue{Int}
     @test size(x) == (6,)
     @test IndexStyle(typeof(x)) == IndexLinear()
+    @test_throws ArgumentError LabeledArray{LabeledValue{Float64}, Int, 1}(vals, lbls)
 
     @test x[1] === LabeledValue(1, lbls)
     @test x[2:3] == [1, 2]
     @test x[isodd.(1:6)] == [1, 2, 3]
+    @test_throws ArgumentError LabeledArray(string.(vals), Dict{String,String}())
 
     vals1 = [1, 2, missing]
     x1 = LabeledArray(vals1, convert(Dict{Union{Int,Missing},String}, lbls))

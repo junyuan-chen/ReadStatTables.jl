@@ -1,3 +1,46 @@
+"""
+    LabeledValue{T}
+
+Value of type `T` that is associated with a dictionary of value labels.
+If a value `v` is not a key in the dictionary,
+then `string(v)` is taken as the label.
+See also [`LabeledArray`](@ref).
+
+The value underlying a `LabeledValue` can be accessed via [`unwrap`](@ref).
+The label can be obtained by converting `LabeledValue` to `String`
+or calling [`labels`](@ref) (notice the `s` at the end).
+
+Comparison operators `==`, `isequal`, `<`, `isless` and `isapprox`
+compare the underlying value of type `T`
+unless a `LabeledValue` is compared with a subtype of `AbstractString`.
+The label is used for comparison in the latter case.
+
+# Examples
+```jldoctest
+julia> lbls = Dict{Union{Int,Missing},String}(0=>"a", 1=>"a");
+
+julia> v0 = LabeledValue(0, lbls)
+0 => a
+
+julia> v1 = LabeledValue(1, lbls)
+1 => a
+
+julia> vm = LabeledValue(missing, lbls)
+missing => missing
+
+julia> v0 == v1
+false
+
+julia> v1 == 1
+true
+
+julia> v1 == "a"
+true
+
+julia> isequal(vm, missing)
+true
+```
+"""
 struct LabeledValue{T}
     value::T
     labels::Dict{T, String}
@@ -36,19 +79,80 @@ Base.isapprox(x::LabeledValue, y; kwargs...) = isapprox(x.value, y; kwargs...)
 Base.isapprox(x, y::LabeledValue; kwargs...) = isapprox(x, y.value; kwargs...)
 
 unwrap(x::LabeledValue) = x.value
+
+"""
+    labels(x::LabeledValue)
+
+Return the label associated with `x`.
+"""
 labels(x::LabeledValue) = _getlabel(x)
 
 Base.show(io::IO, x::LabeledValue) = print(io, _getlabel(x))
 Base.show(io::IO, ::MIME"text/plain", x::LabeledValue) =
-    println(io, x.value, " => ", _getlabel(x))
+    print(io, x.value, " => ", _getlabel(x))
 
 Base.convert(::Type{String}, x::LabeledValue) = _getlabel(x)
 
+"""
+    LabeledArray{T<:LabeledValue, V, N} <: AbstractArray{T, N}
+
+`N`-dimensional dense array with elements associated with labels.
+
+`LabeledArray` provides functionality that is similar to
+what value labels achieve in statistical software such as Stata.
+When printed to `REPL`, a `LabeledArray` just looks like an array of labels.
+Yet, only the underlying values of type `V` are stored in an `Array`.
+The associated labels are looked up
+from a dictionary of type `Dict{V, String}`.
+If a value `v` is not a key in the dictionary,
+then `string(v)` is taken as the label.
+The elements of type [`LabeledValue`](@ref)
+are only constructed lazily when retrieved.
+
+The array of values underlying a `LabeledArray`
+can be accessed with [`refarray`](@ref);
+while an iterator over the labels for each element
+is returned by [`labels`](@ref).
+
+Equality comparison as defined by `==` involving a `LabeledArray`
+only compares the underlying values
+unless the element type of the other array is a subtype of `AbstractString`.
+The labels are used for comparison in the latter case.
+
+# Examples
+```jldoctest
+julia> lbls1 = Dict(1=>"a", 2=>"b");
+
+julia> lbls2 = Dict(1=>"p", 2=>"q");
+
+julia> x = LabeledArray([0, 1, 2], lbls1)
+3-element LabeledArray{LabeledValue{Int64}, Int64, 1}:
+ 0 => 0
+ 1 => a
+ 2 => b
+
+julia> y = LabeledArray([0, 1, 2], lbls2)
+3-element LabeledArray{LabeledValue{Int64}, Int64, 1}:
+ 0 => 0
+ 1 => p
+ 2 => q
+
+julia> x == y
+true
+
+julia> x == 0:2
+true
+
+julia> x == ["0", "a", "b"]
+true
+```
+"""
 struct LabeledArray{T<:LabeledValue, V, N} <: AbstractArray{T, N}
     values::Array{V, N}
     labels::Dict{V, String}
     function LabeledArray{T,V,N}(values::Array{V,N}, labels::Dict{V,String}) where {T,V,N}
         V <: AbstractString && throw(ArgumentError("values of type $V are not accepted"))
+        T == LabeledValue{V} || throw(ArgumentError("expected LabeledValue{$V}, got $T"))
         return new{T,V,N}(values, labels)
     end
 end
@@ -78,6 +182,41 @@ struct LabelIterator{A, N} <: AbstractArray{String, N}
     LabelIterator(a::AbstractArray{<:LabeledValue, N}) where N = new{typeof(a), N}(a)
 end
 
+"""
+    labels(x::AbstractArray{<:LabeledValue})
+
+Return an iterator over the labels for each element in `x`.
+The returned object is a subtype of `AbstractArray` with the same size of `x`.
+
+The iterator can be used to collect the labels while discarding the underlying values.
+
+# Examples
+```jldoctest
+julia> x = LabeledArray([1, 2, 3], Dict(1=>"a", 2=>"b"))
+3-element LabeledArray{LabeledValue{Int64}, Int64, 1}:
+ a
+ b
+ 3
+
+julia> lbls = labels(x)
+3-element ReadStatTables.LabelIterator{LabeledArray{LabeledValue{Int64}, Int64, 1}, 1}:
+ "a"
+ "b"
+ "3"
+
+julia> collect(lbls)
+3-element Vector{String}:
+ "a"
+ "b"
+ "3"
+
+julia> CategoricalArray(lbls)
+3-element CategoricalArray{String,1,UInt32}:
+ "a"
+ "b"
+ "3"
+```
+"""
 labels(x::AbstractArray{<:LabeledValue}) = LabelIterator(x)
 
 Base.size(lbls::LabelIterator) = size(lbls.a)

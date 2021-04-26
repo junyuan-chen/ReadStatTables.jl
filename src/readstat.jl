@@ -6,7 +6,24 @@ const extmap = Dict{String, Val}(
     ".xpt" => Val(:xport)
 )
 
+"""
+    ColumnIndex
+
+A type union for values accepted by [`readstat`](@ref) for selecting a column.
+A column can be selected either with the column name as `Symbol` or `String`;
+or with an integer index based on the position in a table.
+See also [`ColumnSelector`](@ref).
+"""
 const ColumnIndex = Union{Symbol, String, Integer}
+
+"""
+    ColumnSelector
+
+A type union for values accepted by [`readstat`](@ref)
+for selecting either a single column or multiple columns.
+The accepted values must be either a [`ColumnIndex`](@ref)
+or a vector of [`ColumnIndex`](@ref).
+"""
 const ColumnSelector = Union{ColumnIndex, AbstractVector{<:Union{ColumnIndex}}}
 
 function _parse_usecols(file, usecols::Union{Symbol, String})
@@ -70,16 +87,33 @@ function _to_array(d::DataValueVector, missingvalue)
     end
 end
 
-function readstat(filename::AbstractString;
+"""
+    readstat(filepath::AbstractString; kwargs...)
+
+Return a [`ReadStatTable`](@ref) that collects data from a supported data file
+located at `filepath`.
+
+# Accepted File Extensions
+- Stata: `.dta`.
+- SAS: `.sas7bdat` and `.xpt`.
+- SPSS: `.sav` and `por`.
+
+# Keywords
+- `usecols::Union{ColumnSelector, Nothing}=nothing`: only keep data from the specified columns (variables); keep all columns if `usecols=nothing`.
+- `convert_datetime::Union{Bool, ColumnSelector}=true`: convert data from the specified columns to `Date` or `DateTime` if they are recorded in supported time formats; if specified as `true` (`false`), always (never) convert the data whenever possible.
+- `apply_value_labels::Union{Bool, ColumnSelector}=true`: convert data from the specified columns to [`LabeledArray`](@ref) with their value labels; if specified as `true` (`false`), always (never) convert the data whenever possible.
+- `missingvalue=missing`: value used to fill any missing value (`missing` is recommended unless in special circumstances).
+"""
+function readstat(filepath::AbstractString;
         usecols::Union{ColumnSelector, Nothing}=nothing,
         convert_datetime::Union{Bool, ColumnSelector}=true,
         apply_value_labels::Union{Bool, ColumnSelector}=true,
         missingvalue=missing)
 
-    ext = lowercase(splitext(filename)[2])
+    ext = lowercase(splitext(filepath)[2])
     filetype = get(extmap, ext, nothing)
     filetype === nothing && throw(ArgumentError("file extension $ext is not supported"))
-    file = read_data_file(filename, filetype)
+    file = read_data_file(filepath, filetype)
     if usecols === nothing
         icols = 1:length(file.data)
         names = file.headers
