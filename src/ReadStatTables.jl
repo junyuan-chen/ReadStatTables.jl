@@ -11,10 +11,12 @@ import PrettyTables: compact_type_str
 import Tables: columnnames
 
 export refarray, unwrap
+export Date, DateTime
 export columnnames
 
 export LabeledValue,
        LabeledArray,
+       LabeledVector,
        labels,
 
        ReadStatMeta,
@@ -28,13 +30,11 @@ export LabeledValue,
        ReadStatTable,
        getmeta,
 
-       ColumnIndex,
-       ColumnSelector,
        readstat
 
 include("LabeledArrays.jl")
-include("table.jl")
 include("datetime.jl")
+include("table.jl")
 include("readstat.jl")
 
 end

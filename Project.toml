@@ -16,7 +16,6 @@ CategoricalArrays = "0.10"
 DataAPI = "1.6"
 DataFrames = "1"
 DataValues = "0.4"
-PooledArrays = "1.2"
 PrettyTables = "1"
 ReadStat = "1.1"
 Tables = "1.2"
@@ -25,8 +24,7 @@ julia = "1.3"
 [extras]
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-PooledArrays = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["CategoricalArrays", "DataFrames", "PooledArrays", "Test"]
+test = ["CategoricalArrays", "DataFrames", "Test"]

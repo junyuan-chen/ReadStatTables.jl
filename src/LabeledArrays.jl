@@ -78,6 +78,11 @@ Base.isequal(x::Missing, y::LabeledValue) = isequal(x, y.value)
 Base.isapprox(x::LabeledValue, y; kwargs...) = isapprox(x.value, y; kwargs...)
 Base.isapprox(x, y::LabeledValue; kwargs...) = isapprox(x, y.value; kwargs...)
 
+"""
+    unwrap(x::LabeledValue)
+
+Get the value wrapped by `x`.
+"""
 unwrap(x::LabeledValue) = x.value
 
 """
@@ -94,13 +99,13 @@ Base.show(io::IO, ::MIME"text/plain", x::LabeledValue) =
 Base.convert(::Type{String}, x::LabeledValue) = _getlabel(x)
 
 """
-    LabeledArray{T<:LabeledValue, V, N} <: AbstractArray{T, N}
+    LabeledArray{V, N, T<:LabeledValue} <: AbstractArray{T, N}
 
 `N`-dimensional dense array with elements associated with labels.
 
 `LabeledArray` provides functionality that is similar to
 what value labels achieve in statistical software such as Stata.
-When printed to `REPL`, a `LabeledArray` just looks like an array of labels.
+When printed to REPL, a `LabeledArray` just looks like an array of labels.
 Yet, only the underlying values of type `V` are stored in an `Array`.
 The associated labels are looked up
 from a dictionary of type `Dict{V, String}`.
@@ -123,19 +128,19 @@ The labels are used for comparison in the latter case.
 ```jldoctest
 julia> lbls1 = Dict(1=>"a", 2=>"b");
 
-julia> lbls2 = Dict(1=>"p", 2=>"q");
+julia> lbls2 = Dict(1.0=>"p", 2.0=>"q");
 
 julia> x = LabeledArray([0, 1, 2], lbls1)
-3-element LabeledArray{LabeledValue{Int64}, Int64, 1}:
+3-element LabeledVector{Int64, LabeledValue{Int64}}:
  0 => 0
  1 => a
  2 => b
 
-julia> y = LabeledArray([0, 1, 2], lbls2)
-3-element LabeledArray{LabeledValue{Int64}, Int64, 1}:
- 0 => 0
- 1 => p
- 2 => q
+julia> y = LabeledArray([0.0, 1.0, 2.0], lbls2)
+3-element LabeledVector{Float64, LabeledValue{Float64}}:
+ 0.0 => 0.0
+ 1.0 => p
+ 2.0 => q
 
 julia> x == y
 true
@@ -147,20 +152,24 @@ julia> x == ["0", "a", "b"]
 true
 ```
 """
-struct LabeledArray{T<:LabeledValue, V, N} <: AbstractArray{T, N}
+struct LabeledArray{V, N, T<:LabeledValue} <: AbstractArray{T, N}
     values::Array{V, N}
     labels::Dict{V, String}
-    function LabeledArray{T,V,N}(values::Array{V,N}, labels::Dict{V,String}) where {T,V,N}
+    function LabeledArray{V,N}(values::Array{V,N}, labels::Dict{V,String}) where {V,N}
         V <: AbstractString && throw(ArgumentError("values of type $V are not accepted"))
-        T == LabeledValue{V} || throw(ArgumentError("expected LabeledValue{$V}, got $T"))
-        return new{T,V,N}(values, labels)
+        return new{V,N,LabeledValue{V}}(values, labels)
     end
 end
 
-const LabeledVector{T, V} = LabeledArray{T, V, 1}
+"""
+    LabeledVector{V, T}
+
+Alias for [`LabeledArray{V, 1, T}`](@ref).
+"""
+const LabeledVector{V, T} = LabeledArray{V, 1, T}
 
 LabeledArray(values::Array{V,N}, labels::Dict{V,String}) where {V,N} =
-    LabeledArray{LabeledValue{V},V,N}(values, labels)
+    LabeledArray{V,N}(values, labels)
 
 Base.size(x::LabeledArray) = size(x.values)
 Base.IndexStyle(::Type{<:LabeledArray}) = IndexLinear()
@@ -170,6 +179,14 @@ Base.@propagate_inbounds function Base.getindex(x::LabeledArray, i::Int)
     return LabeledValue(val, x.labels)
 end
 
+"""
+    refarry(x::LabeledArray)
+    refarray(x::SubArray{<:Any, <:Any, <:LabeledArray})
+    refarray(x::Base.ReshapedArray{<:Any, <:Any, <:LabeledArray})
+    refarray(x::AbstractArray{<:LabeledValue})
+
+Return the array of values underlying a [`LabeledArray`](@ref).
+"""
 refarray(x::LabeledArray) = x.values
 refarray(x::SubArray{<:Any, <:Any, <:LabeledArray}) =
     view(parent(x).values, x.indices...)
@@ -193,13 +210,13 @@ The iterator can be used to collect the labels while discarding the underlying v
 # Examples
 ```jldoctest
 julia> x = LabeledArray([1, 2, 3], Dict(1=>"a", 2=>"b"))
-3-element LabeledArray{LabeledValue{Int64}, Int64, 1}:
- a
- b
- 3
+3-element LabeledVector{Int64, LabeledValue{Int64}}:
+ 1 => a
+ 2 => b
+ 3 => 3
 
 julia> lbls = labels(x)
-3-element ReadStatTables.LabelIterator{LabeledArray{LabeledValue{Int64}, Int64, 1}, 1}:
+3-element ReadStatTables.LabelIterator{LabeledVector{Int64, LabeledValue{Int64}}, 1}:
  "a"
  "b"
  "3"
@@ -238,8 +255,11 @@ Base.:(==)(x::AbstractArray, y::LabeledArray) = x == y.values
 Base.:(==)(x::LabeledArray, y::AbstractArray{<:AbstractString}) = labels(x) == y
 Base.:(==)(x::AbstractArray{<:AbstractString}, y::LabeledArray) = x == labels(y)
 
-Base.copy(x::LabeledArray{T,V,N}) where {T,V,N} =
-    LabeledArray{T,V,N}(copy(x.values), copy(x.labels))
+Base.copy(x::LabeledArray{V,N}) where {V,N} =
+    LabeledArray{V,N}(copy(x.values), copy(x.labels))
+
+Base.convert(::Type{Array{V1,N}}, x::LabeledArray{V2,N}) where {V1,V2,N} =
+    convert(Array{V1}, x.values)
 
 # Assume VERSION >= v"1.3.0"
 function compact_type_str(::Type{LabeledValue{V}}) where V

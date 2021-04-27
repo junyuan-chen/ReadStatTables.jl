@@ -84,6 +84,7 @@ fileext(::Nothing) = nothing
 Base.show(io::IO, m::ReadStatMeta) = print(io, typeof(m).name.name)
 function Base.show(io::IO, ::MIME"text/plain", m::ReadStatMeta)
     println(io, typeof(m).name.name, ':')
+    io = IOContext(io, :limit=>true)
     println(io, "  variable labels:    ", m.labels)
     println(io, "  variable formats:   ", m.formats)
     println(io, "  value label names:  ", m.val_label_keys)
@@ -94,7 +95,7 @@ function Base.show(io::IO, ::MIME"text/plain", m::ReadStatMeta)
 end
 
 """
-    ReadStatTable <: AbstractColumns
+    ReadStatTable <: Tables.AbstractColumns
 
 A `Tables.jl`-compatible column table that collects data
 from a Stata, SAS or SPSS file.

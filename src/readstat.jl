@@ -99,16 +99,16 @@ located at `filepath`.
 - SPSS: `.sav` and `por`.
 
 # Keywords
-- `usecols::Union{ColumnSelector, Nothing}=nothing`: only keep data from the specified columns (variables); keep all columns if `usecols=nothing`.
-- `convert_datetime::Union{Bool, ColumnSelector}=true`: convert data from the specified columns to `Date` or `DateTime` if they are recorded in supported time formats; if specified as `true` (`false`), always (never) convert the data whenever possible.
-- `apply_value_labels::Union{Bool, ColumnSelector}=true`: convert data from the specified columns to [`LabeledArray`](@ref) with their value labels; if specified as `true` (`false`), always (never) convert the data whenever possible.
-- `missingvalue=missing`: value used to fill any missing value (`missing` is recommended unless in special circumstances).
+- `usecols::Union{ColumnSelector, Nothing} = nothing`: only keep data from the specified columns (variables); keep all columns if `usecols=nothing`.
+- `convert_datetime::Union{Bool, ColumnSelector} = true`: convert data from the specified columns to `Date` or `DateTime` if they are recorded in supported time formats; if specified as `true` (`false`), always (never) convert the data whenever possible.
+- `apply_value_labels::Union{Bool, ColumnSelector} = true`: convert data from the specified columns to [`LabeledArray`](@ref) with their value labels; if specified as `true` (`false`), always (never) convert the data whenever possible.
+- `missingvalue = missing`: value used to fill any missing value (should be `missing` unless in special circumstances).
 """
 function readstat(filepath::AbstractString;
-        usecols::Union{ColumnSelector, Nothing}=nothing,
-        convert_datetime::Union{Bool, ColumnSelector}=true,
-        apply_value_labels::Union{Bool, ColumnSelector}=true,
-        missingvalue=missing)
+        usecols::Union{ColumnSelector, Nothing} = nothing,
+        convert_datetime::Union{Bool, ColumnSelector} = true,
+        apply_value_labels::Union{Bool, ColumnSelector} = true,
+        missingvalue = missing)
 
     ext = lowercase(splitext(filepath)[2])
     filetype = get(extmap, ext, nothing)

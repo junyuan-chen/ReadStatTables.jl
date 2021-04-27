@@ -43,11 +43,10 @@ end
 @testset "LabeledArray" begin
     vals = repeat(1:3, inner=2)
     lbls = Dict(i=>string(i) for i in 1:3)
-    x = LabeledArray{LabeledValue{Int}, Int, 1}(vals, lbls)
+    x = LabeledArray{Int, 1}(vals, lbls)
     @test eltype(x) == LabeledValue{Int}
     @test size(x) == (6,)
     @test IndexStyle(typeof(x)) == IndexLinear()
-    @test_throws ArgumentError LabeledArray{LabeledValue{Float64}, Int, 1}(vals, lbls)
 
     @test x[1] === LabeledValue(1, lbls)
     @test x[2:3] == [1, 2]
@@ -99,8 +98,9 @@ end
     @test copy(x) == x
     @test typeof(copy(x)) == typeof(x)
 
+    @test convert(Vector{Int}, x) === x.values
+    @test convert(Vector{Int16}, x) == x.values
+
     c = CategoricalArray(labels(x))
     @test c == string.(vals)
-    p = PooledArray(labels(x))
-    @test p == string.(vals)
 end

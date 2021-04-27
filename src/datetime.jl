@@ -11,7 +11,7 @@ const stata_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
     "%tw" => (stata_epoch_date, Week(1)),
     "%tm" => (stata_epoch_date, Month(1)),
     "%tq" => (stata_epoch_date, Month(3)),
-    "%th" => (stata_epoch_date, Month(3)),
+    "%th" => (stata_epoch_date, Month(6)),
     "%ty" => (Date(0), Year(1))
 )
 

@@ -4,7 +4,6 @@ using ReadStatTables
 using CategoricalArrays
 using DataFrames
 using Dates
-using PooledArrays
 using ReadStat
 using ReadStatTables: _parse_usecols
 using Tables
