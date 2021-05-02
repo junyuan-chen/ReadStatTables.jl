@@ -8,14 +8,14 @@
 [![docs-stable][docs-stable-img]][docs-stable-url]
 [![docs-dev][docs-dev-img]][docs-dev-url]
 
-[CI-stable-img]: https://github.com/junyuan-chen/ReadstatTables.jl/workflows/CI-stable/badge.svg
-[CI-stable-url]: https://github.com/junyuan-chen/ReadstatTables.jl/actions?query=workflow%3ACI-stable
+[CI-stable-img]: https://github.com/junyuan-chen/ReadStatTables.jl/workflows/CI-stable/badge.svg
+[CI-stable-url]: https://github.com/junyuan-chen/ReadStatTables.jl/actions?query=workflow%3ACI-stable
 
-[codecov-img]: https://codecov.io/gh/junyuan-chen/ReadstatTables.jl/branch/main/graph/badge.svg
-[codecov-url]: https://codecov.io/gh/junyuan-chen/ReadstatTables.jl
+[codecov-img]: https://codecov.io/gh/junyuan-chen/ReadStatTables.jl/branch/main/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/junyuan-chen/ReadStatTables.jl
 
-[pkgeval-img]: https://juliaci.github.io/NanosoldierReports/pkgeval_badges/R/ReadstatTables.svg
-[pkgeval-url]: https://juliaci.github.io/NanosoldierReports/pkgeval_badges/R/ReadstatTables.html
+[pkgeval-img]: https://juliaci.github.io/NanosoldierReports/pkgeval_badges/R/ReadStatTables.svg
+[pkgeval-url]: https://juliaci.github.io/NanosoldierReports/pkgeval_badges/R/ReadStatTables.html
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://junyuan-chen.github.io/ReadStatTables.jl/stable/
@@ -44,6 +44,8 @@ from [ReadStat.jl](https://github.com/queryverse/ReadStat.jl).
 - Translation of date and time values into Julia time types `Date` and `DateTime`.
 
 ## Quick Start
+
+To load a data file located at `data/sample.dta`:
 
 ```julia
 julia> using ReadStatTables
