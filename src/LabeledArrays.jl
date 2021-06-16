@@ -11,9 +11,9 @@ The label can be obtained by converting `LabeledValue` to `String`
 or calling [`labels`](@ref) (notice the `s` at the end).
 
 Comparison operators `==`, `isequal`, `<`, `isless` and `isapprox`
-compare the underlying value of type `T`
-unless a `LabeledValue` is compared with a subtype of `AbstractString`.
-The label is used for comparison in the latter case.
+compare the underlying value of type `T`.
+An exception is that when a `LabeledValue` and a string are compared with `==`,
+the comparison is based on the label.
 
 # Examples
 ```jldoctest
@@ -69,14 +69,23 @@ Base.:(==)(x::LabeledValue, y::AbstractString) = _getlabel(x) == y
 Base.:(==)(x::AbstractString, y::LabeledValue) = x == _getlabel(y)
 Base.:(==)(::LabeledValue, ::Missing) = missing
 Base.:(==)(::Missing, ::LabeledValue) = missing
+
 Base.isequal(x::LabeledValue, y) = isequal(x.value, y)
 Base.isequal(x, y::LabeledValue) = isequal(x, y.value)
-Base.isequal(x::LabeledValue, y::AbstractString) = isequal(_getlabel(x), y)
-Base.isequal(x::AbstractString, y::LabeledValue) = isequal(x, _getlabel(y))
 Base.isequal(x::LabeledValue, y::Missing) = isequal(x.value, y)
 Base.isequal(x::Missing, y::LabeledValue) = isequal(x, y.value)
+Base.:(<)(x::LabeledValue, y) = x.value < y
+Base.:(<)(x, y::LabeledValue) = x < y.value
+Base.:(<)(x::LabeledValue, y::Missing) = x.value < y
+Base.:(<)(x::Missing, y::LabeledValue) = x < y.value
+Base.isless(x::LabeledValue, y) = isless(x.value, y)
+Base.isless(x, y::LabeledValue) = isless(x, y.value)
+Base.isless(x::LabeledValue, y::Missing) = isless(x.value, y)
+Base.isless(x::Missing, y::LabeledValue) = isless(x, y.value)
 Base.isapprox(x::LabeledValue, y; kwargs...) = isapprox(x.value, y; kwargs...)
 Base.isapprox(x, y::LabeledValue; kwargs...) = isapprox(x, y.value; kwargs...)
+
+Base.hash(x::LabeledValue, h::UInt=zero(UInt)) = hash(x.value, h)
 
 """
     unwrap(x::LabeledValue)

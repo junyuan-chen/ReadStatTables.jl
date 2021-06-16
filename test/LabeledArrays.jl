@@ -18,16 +18,26 @@
     @test 1 == v1
     @test v1 == "a"
     @test "a" == v1
-    @test isequal(v1 == missing, missing)
-    @test isequal(missing, missing == v1)
+    @test ismissing(v1 == missing)
+    @test ismissing(missing == v1)
     @test isequal(v1, 1)
     @test isequal(1, v1)
     @test isequal(v4, missing)
     @test isequal(missing, v4)
-    @test isequal(v4, "missing")
-    @test isequal("missing", v4)
+    @test v1 < 2
+    @test 0 < v1
+    @test ismissing(v1 < missing)
+    @test ismissing(missing < v1)
+    @test isless(v1, 2)
+    @test isless(0, v1)
+    @test isless(v1, missing)
+    @test !isless(missing, v1)
     @test isapprox(v3, 1.0)
     @test isapprox(1.0, v3)
+
+    @test hash(v1) == hash(v1.value)
+    d = Dict{LabeledValue, Int}(v1 => 1)
+    @test haskey(d, v3)
 
     @test unwrap(v1) === 1
     @test labels(v1) == "a"
