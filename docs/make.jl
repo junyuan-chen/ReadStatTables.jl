@@ -8,7 +8,9 @@ makedocs(
     modules = [ReadStatTables],
     format = Documenter.HTML(
         canonical = "https://junyuan-chen.github.io/ReadStatTables.jl/stable/",
-        prettyurls = get(ENV, "CI", nothing) == "true"),
+        prettyurls = get(ENV, "CI", nothing) == "true",
+        edit_link = "main"
+    ),
     sitename = "ReadStatTables.jl",
     authors = "Junyuan Chen",
     pages = [

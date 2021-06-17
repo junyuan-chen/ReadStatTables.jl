@@ -3,10 +3,10 @@
 Here is an introduction to the main function of ReadStatTables.jl.
 For instructions on installation, see [Installation](@ref).
 
-## Loading a Data File
+## Reading a Data File
 
 Suppose we have a Stata `.dta` file located at `data/sample.dta`.
-To load this file into Julia, run
+To read this file into Julia, run
 
 ```@repl getting-started
 using ReadStatTables
