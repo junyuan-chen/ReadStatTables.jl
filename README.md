@@ -1,6 +1,6 @@
 # ReadStatTables.jl
 
-*Load data from Stata, SAS and SPSS files into Julia tables*
+*Read data files from Stata, SAS and SPSS into Julia tables*
 
 [![CI-stable][CI-stable-img]][CI-stable-url]
 [![codecov][codecov-img]][codecov-url]
@@ -24,7 +24,7 @@
 [docs-dev-url]: https://junyuan-chen.github.io/ReadStatTables.jl/dev/
 
 [ReadStatTables.jl](https://github.com/junyuan-chen/ReadStatTables.jl)
-is a Julia package for loading data from Stata, SAS and SPSS files into
+is a Julia package for reading data files from Stata, SAS and SPSS into
 a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible table.
 It relies on [ReadStat.jl](https://github.com/queryverse/ReadStat.jl),
 which is a Julia interface of the
@@ -62,4 +62,33 @@ julia> tb = readstat("data/sample.dta")
    5 │      e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00
 ```
 
-For details, please see the [documentation][docs-stable-url].
+To access a column from the above table:
+
+```julia
+julia> tb.myord
+5-element LabeledVector{Union{Missing, Int8}, LabeledValue{Union{Missing, Int8}}}:
+ 1 => low
+ 2 => medium
+ 3 => high
+ 1 => low
+ missing => missing
+```
+
+Notice that for data variables with value labels,
+both the original values and the labels are preserved.
+
+To access metadata including variable labels:
+
+```julia
+julia> getmeta(tb)
+ReadStatMeta:
+  variable labels:    Dict(:myord => "ordinal", :mynum => "numeric", :mydate => "date", :mychar => "character", :dtime => "datetime", :mytime => "time", :mylabl => "labeled")
+  variable formats:   Dict(:myord => "%16.0f", :mynum => "%16.2f", :mydate => "%td", :mychar => "%-1s", :dtime => "%tc", :mytime => "%tcHH:MM:SS", :mylabl => "%16.0f")
+  value label names:  Dict(:myord => "myord", :mynum => "", :mydate => "", :mychar => "", :dtime => "", :mytime => "", :mylabl => "mylabl")
+  value labels:       Dict{String, Dict{Any, String}}("myord" => Dict(2 => "medium", 3 => "high", 1 => "low"), "mylabl" => Dict(2 => "Female", 1 => "Male"))
+  file label:         A test file
+  file timestamp:     2021-04-23T04:36:00
+  file extension:     .dta
+```
+
+For additional details, please see the [documentation][docs-stable-url].
