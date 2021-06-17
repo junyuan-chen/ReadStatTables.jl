@@ -3,7 +3,7 @@
 Welcome to the documentation site for ReadStatTables.jl!
 
 [ReadStatTables.jl](https://github.com/junyuan-chen/ReadStatTables.jl)
-is a Julia package for loading data from Stata, SAS and SPSS files into
+is a Julia package for reading data files from Stata, SAS and SPSS into
 a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible table.
 It relies on [ReadStat.jl](https://github.com/queryverse/ReadStat.jl),
 which is a Julia interface of the
