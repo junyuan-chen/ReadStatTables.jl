@@ -123,6 +123,53 @@ Retrieve the metadata parsed from a data file.
 """
 getmeta(tb::ReadStatTable) = getfield(tb, :meta)
 
+hasmetadata(tb::ReadStatTable) = getmeta(tb) !== nothing
+hasmetadata(tb::ReadStatTable, col::Symbol) = getmeta(tb) !== nothing && haskey(tb, col)
+
+function metadata(tb::ReadStatTable)
+    meta = getmeta(tb)
+    meta === nothing && throw(ArgumentError("File has no metadata"))
+
+    ret = Dict{String, Any}("file_modified" => meta.timestamp,
+                            "file_extension" => meta.fileext)
+
+    label = meta.filelabel
+    if label != ""
+        ret["label"] = label
+    end
+
+    return ret
+end
+
+function metadata(tb::ReadStatTable, col::Symbol)
+    meta = getmeta(tb)
+    meta === nothing && throw(ArgumentError("File has no metadata"))
+    haskey(tb, col) || throw(ArgumentError("File has no column :$col"))
+
+    ret = Dict{String, Any}()
+
+    format = meta.formats[col]
+    if format != ""
+        ret["variable_format"] = format
+    end
+
+    label = meta.labels[col]
+    if label != ""
+        ret["label"] = label
+    end
+
+    # ReadStat.jl does not handle value labels for SAS at this moment
+    if meta.fileext != ".xpt" && meta.fileext != ".sas7bdat"
+        val_label = get(meta.val_label_keys, col, nothing)
+        if val_label != ""
+            ret["value_label_name"] = val_label
+            ret["value_labels"] = meta.val_label_dict[val_label]
+        end
+    end
+
+    return ret
+end
+
 varlabels(tb::ReadStatTable) = varlabels(getmeta(tb))
 varformats(tb::ReadStatTable) = varformats(getmeta(tb))
 val_label_keys(tb::ReadStatTable) = val_label_keys(getmeta(tb))

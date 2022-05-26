@@ -2,6 +2,7 @@ using Test
 using ReadStatTables
 
 using CategoricalArrays
+using DataAPI
 using DataFrames
 using Dates
 using ReadStat
