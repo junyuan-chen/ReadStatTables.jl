@@ -6,7 +6,7 @@ using PrettyTables: pretty_table
 using ReadStat: read_data_file
 using Tables
 
-import DataAPI: refarray, unwrap
+import DataAPI: refarray, unwrap, hasmetadata, metadata
 import PrettyTables: compact_type_str
 import Tables: columnnames
 
