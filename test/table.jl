@@ -4,12 +4,22 @@
     @test length(tb) == 0
     @test isempty(tb)
     @test sprint(show, MIME("text/plain"), tb) == "0×0 ReadStatTable"
+    @test !DataAPI.hasmetadata(tb)
+    @test !DataAPI.hasmetadata(tb, :col)
+    @test_throws ArgumentError DataAPI.metadata(tb)
+    @test_throws ArgumentError DataAPI.metadata(tb, :col)
 
     tb = ReadStatTable(AbstractVector[[]], Symbol[:c])
     @test size(tb) == (0, 1)
     @test length(tb) == 1
     @test isempty(tb)
     @test sprint(show, MIME("text/plain"), tb) == "0×1 ReadStatTable"
+    @test !DataAPI.hasmetadata(tb)
+    @test !DataAPI.hasmetadata(tb, :col)
+    @test !DataAPI.hasmetadata(tb, :c)
+    @test_throws ArgumentError DataAPI.metadata(tb)
+    @test_throws ArgumentError DataAPI.metadata(tb, :col)
+    @test_throws ArgumentError DataAPI.metadata(tb, :c)
 
     c1 = collect(1:10)
     c2 = collect(10.0:-1.0:1.0)
@@ -58,4 +68,13 @@
     @test filelabel(tb) === nothing
     @test filetimestamp(tb) === nothing
     @test fileext(tb) === nothing
+
+    @test !DataAPI.hasmetadata(tb)
+    @test !DataAPI.hasmetadata(tb, :col)
+    @test !DataAPI.hasmetadata(tb, :c1)
+    @test !DataAPI.hasmetadata(tb, :c2)
+    @test_throws ArgumentError DataAPI.metadata(tb)
+    @test_throws ArgumentError DataAPI.metadata(tb, :col)
+    @test_throws ArgumentError DataAPI.metadata(tb, :c1)
+    @test_throws ArgumentError DataAPI.metadata(tb, :c2)
 end
