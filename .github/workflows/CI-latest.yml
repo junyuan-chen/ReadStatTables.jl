@@ -3,9 +3,15 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
     tags: '*'
 jobs:
   test:
@@ -20,16 +26,15 @@ jobs:
           - 'nightly'
         os:
           - 'ubuntu-latest'
-          - 'macos-latest'
         arch:
           - 'x64'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: julia-actions/setup-julia@v1
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: actions/cache@v1
+      - uses: actions/cache@v3
         env:
           cache-name: cache-artifacts
         with:
