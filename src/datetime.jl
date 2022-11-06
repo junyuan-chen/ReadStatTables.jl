@@ -16,42 +16,40 @@ const stata_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
 )
 
 # Reference: https://github.com/Roche/pyreadstat/blob/master/pyreadstat/_readstat_parser.pyx
+const sas_date_formats = [
+    "WEEKDATE", "MMDDYY", "DDMMYY", "YYMMDD", "DATE", "DATE9", "YYMMDD10",
+    "DDMMYYB", "DDMMYYB10", "DDMMYYC", "DDMMYYC10", "DDMMYYD", "DDMMYYD10",
+    "DDMMYYN6", "DDMMYYN8", "DDMMYYP", "DDMMYYP10", "DDMMYYS", "DDMMYYS10",
+    "MMDDYYB", "MMDDYYB10", "MMDDYYC", "MMDDYYC10", "MMDDYYD", "MMDDYYD10",
+    "MMDDYYN6", "MMDDYYN8", "MMDDYYP", "MMDDYYP10", "MMDDYYS", "MMDDYYS10",
+    "MONNAME", "MONTH", "WEEKDATX", "WEEKDAY", "QTR", "QTRR", "YEAR",
+    "YYMMDDB", "YYMMDDD", "YYMMDDN", "YYMMDDP", "YYMMDDS", "DAY", "DOWNAME"
+]
+const sas_datetime_formats = [
+    "DATETIME", "DATETIME18", "DATETIME19",  "DATETIME20", "DATETIME21", "DATETIME22", "TOD"
+]
+const sas_time_formats = ["TIME", "HHMM", "TIME20.3", "TIME20", "HOUR", "TIME5"]
+
 const sas_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
-    "TIME" => (sas_epoch_time, Second(1)),
-    "HHMM" => (sas_epoch_time, Second(1)),
-    "TIME20.3" => (sas_epoch_time, Second(1)),
-    "DATETIME" => (sas_epoch_time, Second(1)),
-    "DATETIME20" => (sas_epoch_time, Second(1)),
-    "WEEKDATE" => (sas_epoch_date, Day(1)),
-    "MMDDYY" => (sas_epoch_date, Day(1)),
-    "DDMMYY" => (sas_epoch_date, Day(1)),
-    "YYMMDD" => (sas_epoch_date, Day(1)),
-    "DATE" => (sas_epoch_date, Day(1)),
-    "DATE9" => (sas_epoch_date, Day(1)),
-    "YYMMDD10" => (sas_epoch_date, Day(1))
+    vcat(sas_date_formats .=> ((sas_epoch_date, Day(1)),),
+        sas_datetime_formats .=> ((sas_epoch_time, Second(1)),),
+        sas_time_formats .=> ((sas_epoch_time, Second(1)),))
 )
 
 # Reference: https://github.com/Roche/pyreadstat/blob/master/pyreadstat/_readstat_parser.pyx
+const spss_datetime_formats = [
+    "DATETIME", "DATETIME8", "DATETIME17", "DATETIME20", "DATETIME23.2",
+    "YMDHMS16", "YMDHMS19", "YMDHMS19.2", "YMDHMS20"
+]
+const spss_date_formats = [
+    "DATE", "DATE8", "DATE11", "DATE12", "ADATE", "ADATE8", "ADATE10",
+    "EDATE", "EDATE8", "EDATE10", "JDATE", "JDATE5", "JDATE7", "SDATE", "SDATE8", "SDATE10"
+]
+const spss_time_formats = ["TIME", "DTIME", "TIME8", "TIME5", "TIME11.2"]
+
 const spss_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
-    "TIME" => (spss_epoch_time, Second(1)),
-    "DTIME" => (spss_epoch_time, Second(1)),
-    "TIME8" => (spss_epoch_time, Second(1)),
-    "TIME5" => (spss_epoch_time, Second(1)),
-    "TIME11.2" => (spss_epoch_time, Second(1)),
-    "DATETIME" => (spss_epoch_time, Second(1)),
-    "DATETIME20" => (spss_epoch_time, Second(1)),
-    "DATETIME23.2" => (spss_epoch_time, Second(1)),
-    "DATETIME8" => (spss_epoch_time, Second(1)),
-    "YMDHMS20" => (spss_epoch_time, Second(1)),
-    "DATE" => (spss_epoch_time, Second(1)),
-    "ADATE" => (spss_epoch_time, Second(1)),
-    "EDATE" => (spss_epoch_time, Second(1)),
-    "JDATE" => (spss_epoch_time, Second(1)),
-    "SDATE" => (spss_epoch_time, Second(1)),
-    "EDATE10" => (spss_epoch_time, Second(1)),
-    "DATE8" => (spss_epoch_time, Second(1)),
-    "EDATE8" => (spss_epoch_time, Second(1)),
-    "DATE11" => (spss_epoch_time, Second(1))
+    vcat(spss_datetime_formats, spss_date_formats, spss_time_formats) .=>
+        ((spss_epoch_time, Second(1)),)
 )
 
 const dt_formats = Dict{Val, Dict}(
