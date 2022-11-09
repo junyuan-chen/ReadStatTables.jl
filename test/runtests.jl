@@ -7,6 +7,7 @@ using DataFrames
 using Dates
 using ReadStat
 using ReadStatTables: _parse_usecols
+using StructArrays: StructVector
 using Tables
 
 const tests = [

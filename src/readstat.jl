@@ -7,16 +7,6 @@ const extmap = Dict{String, Val}(
 )
 
 """
-    ColumnIndex
-
-A type union for values accepted by [`readstat`](@ref) for selecting a column.
-A column can be selected either with the column name as `Symbol` or `String`;
-or with an integer index based on the position in a table.
-See also [`ColumnSelector`](@ref).
-"""
-const ColumnIndex = Union{Symbol, String, Integer}
-
-"""
     ColumnSelector
 
 A type union for values accepted by [`readstat`](@ref)
@@ -29,7 +19,7 @@ const ColumnSelector = Union{ColumnIndex, AbstractVector{<:Union{ColumnIndex}}}
 function _parse_usecols(file, usecols::Union{Symbol, String})
     c = findfirst(x->x==Symbol(usecols), file.headers)
     c === nothing && throw(ArgumentError("column name $usecols is not found"))
-    return (c,)
+    return c:c
 end
 
 function _parse_usecols(file, usecols::AbstractVector{<:Union{Symbol, String}})
@@ -46,7 +36,7 @@ end
 function _parse_usecols(file, usecols::Integer)
     N = length(file.data)
     0 < usecols <= N || throw(ArgumentError("invalid column index $usecols"))
-    return (usecols,)
+    return usecols:usecols
 end
 
 function _parse_usecols(file, usecols::AbstractVector{<:Integer})
@@ -130,9 +120,6 @@ function readstat(filepath::AbstractString;
         (apply_value_labels = Symbol.(apply_value_labels))
 
     cols = Vector{AbstractVector}(undef, length(icols))
-    varlabels = Dict{Symbol, String}()
-    formats = Dict{Symbol, String}()
-    val_label_keys = Dict{Symbol, String}()
     @inbounds for (i, c) in enumerate(icols)
         col, hasmissing = _to_array(file.data[c], missingvalue)
         n = names[i]
@@ -156,11 +143,15 @@ function readstat(filepath::AbstractString;
             end
         end
         cols[i] = col
-        varlabels[n] = file.labels[c]
-        formats[n] = file.formats[c]
-        val_label_keys[n] = file.val_label_keys[c]
     end
-    meta = ReadStatMeta(varlabels, formats, val_label_keys,
-        file.val_label_dict, file.filelabel, file.timestamp, ext)
-    return ReadStatTable(cols, names, meta)
+    meta = ReadStatMeta(file.filelabel, file.val_label_dict, file.timestamp, ext)
+    if usecols === nothing
+        colmeta = StructVector{ReadStatColMeta}((file.labels, file.formats,
+            file.val_label_keys, file.measures, file.alignments, file.storagewidths))
+    else
+        colmeta = StructVector{ReadStatColMeta}(map(x->view(x, icols),
+            (file.labels, file.formats, file.val_label_keys, file.measures, file.alignments,
+            file.storagewidths)))
+    end
+    return ReadStatTable(cols, names, meta, colmeta, Dict{Symbol,Symbol}())
 end

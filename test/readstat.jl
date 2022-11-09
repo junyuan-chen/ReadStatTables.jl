@@ -1,11 +1,11 @@
 @testset "_parse_usecols" begin
     dta = "$(@__DIR__)/../data/sample.dta"
     f = read_dta(dta)
-    @test _parse_usecols(f, :dtime) == _parse_usecols(f, "dtime") == (4,)
+    @test _parse_usecols(f, :dtime) == _parse_usecols(f, "dtime") == 4:4
     @test_throws ArgumentError _parse_usecols(f, :time)
     @test _parse_usecols(f, [:dtime]) == _parse_usecols(f, ["dtime"]) == [4]
     @test_throws ArgumentError _parse_usecols(f, [:time])
-    @test _parse_usecols(f, 1) == (1,)
+    @test _parse_usecols(f, 1) == 1:1
     @test_throws ArgumentError _parse_usecols(f, 8)
     @test _parse_usecols(f, [1, 2]) == 1:2
     @test_throws ArgumentError _parse_usecols(f, 1:8)
@@ -25,56 +25,57 @@ end
            4 │      d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
            5 │      e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
 
-    @test length(varlabels(d)) == 7
-    @test varlabels(d)[:myord] == "ordinal"
-    @test length(varformats(d)) == 7
-    @test varformats(d)[:mytime] == "%tcHH:MM:SS"
-    @test val_label_keys(d)[:mylabl] == "mylabl"
-    @test val_label_dict(d)["mylabl"] == d.mylabl.labels
-    @test filelabel(d) == "A test file"
-    ts = filetimestamp(d)
-    @test minute(ts) == 36
-    @test fileext(d) == ".dta"
+    m = metadata(d)
+    @test m["vallabels"]["mylabl"] == d.mylabl.labels
+    @test minute(m.timestamp) == 36
+    @test sprint(show, m) == "ReadStatMeta(A test file, .dta)"
+    @test sprint(show, MIME("text/plain"), m) == """
+        ReadStatMeta:
+          file label     => A test file
+          value labels   => ["mylabl", "myord"]
+          timestamp      => 2021-04-23T04:36:00
+          file extension => .dta"""
 
-    @test sprint(show, getmeta(d)) == "ReadStatMeta"
-    ss = sprint(show, MIME("text/plain"), getmeta(d))
-    @test first(ss, 40) == "ReadStatMeta:\n  variable labels:    Dict"
-    @test last(ss, 27) == "\n  file extension:     .dta"
+    ms = colmetadata(d)
+    @test length(ms) == 7
+    @test sprint(show, MIME("text/plain"), ms)[1:95] == """
+        ColMetaIterator{ReadStatColMeta} with 7 entries:
+          :mychar => ReadStatColMeta(character, %-1s)
+        """
 
-    @test DataAPI.hasmetadata(d)
-    meta = DataAPI.metadata(d)
-    @test meta isa Dict{String, Any}
-    @test meta ==
-        Dict("label" => "A test file",
-             "file_modified" => DateTime("2021-04-22T19:36:00"),
-             "file_extension" => ".dta")
-    for col in Tables.columnnames(d)
-        @test DataAPI.hasmetadata(d, col)
-        colmeta = DataAPI.metadata(d, col)
-        @test colmeta isa Dict{String, Any}
-        @test colmeta["label"] != ""
-        @test colmeta["variable_format"] != ""
-    end
-    @test DataAPI.metadata(d, :mylabl) ==
-        Dict("label" => "labeled", "variable_format" => "%16.0f",
-             "value_label_name" => "mylabl",
-             "value_labels" => Dict(2 => "Female", 1 => "Male"))
-    @test DataAPI.metadata(d, :myord) ==
-        Dict("label" => "ordinal", "variable_format" => "%16.0f",
-             "value_label_name" => "myord",
-             "value_labels" => Dict(2 => "medium", 3 => "high", 1 => "low"))
-    @test !DataAPI.hasmetadata(d, :col)
-    @test_throws ArgumentError DataAPI.metadata(d, :col)
+    @test colmetadata(d, :myord, "label") == "ordinal"
+    @test colmetadata(d, :mytime, :format) == "%tcHH:MM:SS"
+    @test colmetadata(d, :mylabl, "vallabel") == "mylabl"
+
+    @test colmetavalues(d, :label) ==
+        ["character", "numeric", "date", "datetime", "labeled", "ordinal", "time"]
+    @test colmetavalues(d, :format) ==
+        ["%-1s", "%16.2f", "%td", "%tc", "%16.0f", "%16.0f", "%tcHH:MM:SS"]
+    @test colmetavalues(d, "vallabel") ==
+        ["", "", "", "", "mylabl", "myord", ""]
+    @test colmetavalues(d, :measure) == zeros(7)
+    @test colmetavalues(d, :alignment) == zeros(7)
 
     df = DataFrame(d)
     @test all(n->isequal(df[!, n], getproperty(d, n)), columnnames(d))
     df = DataFrame(d, copycols=false)
     @test all(n->df[!, n] === getproperty(d, n), columnnames(d))
+    @test metadata(df, "filelabel") == "A test file"
+    @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
+    @test colmetadata(df, :mynum, "label") == "numeric"
+    @test length(colmetadatakeys(df, :mylabl)) == fieldcount(ReadStatColMeta)
+
+    metastyle!(d, "filelabel", :note)
+    metastyle!(d, "label", :note)
+    df = DataFrame(d)
+    @test metadata(df, "filelabel", style=true) == ("A test file", :note)
+    @test metadata(df, "vallabels", style=true)[2] == :default
+    @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
 
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
-    @test isempty(varlabels(d))
-    @test length(val_label_dict(d)) == 2
+    @test isempty(colmetadata(d))
+    @test length(metadata(d, "vallabels")) == 2
 
     d = readstat(dta, usecols=1:3, convert_datetime=3)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
@@ -142,29 +143,22 @@ end
            4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
            5 │      e   1000.3              missing              missing              Male               low              missing"""
 
-    @test DataAPI.hasmetadata(d)
-    meta = DataAPI.metadata(d)
-    @test meta isa Dict{String, Any}
-    @test meta ==
-        Dict("file_modified" => DateTime("2018-08-16T15:22:33"),
-             "file_extension" => ".sav")
-    for col in Tables.columnnames(d)
-        @test DataAPI.hasmetadata(d, col)
-        colmeta = DataAPI.metadata(d, col)
-        @test colmeta isa Dict{String, Any}
-        @test colmeta["label"] != ""
-        @test colmeta["variable_format"] != ""
-    end
-    @test DataAPI.metadata(d, :mylabl) ==
-        Dict("label" => "labeled", "variable_format" => "F8.2",
-             "value_label_name" => "labels0",
-             "value_labels" => Dict(2 => "Female", 1 => "Male"))
-    @test DataAPI.metadata(d, :myord) ==
-        Dict("label" => "ordinal", "variable_format" => "F8.2",
-             "value_label_name" => "labels1",
-             "value_labels" => Dict(2 => "medium", 3 => "high", 1 => "low"))
-    @test !DataAPI.hasmetadata(d, :col)
-    @test_throws ArgumentError DataAPI.metadata(d, :col)
+    m = metadata(d)
+    @test sprint(show, MIME("text/plain"), m) == """
+        ReadStatMeta:
+          file label     => 
+          value labels   => ["labels0", "labels1"]
+          timestamp      => 2018-08-17T00:22:33
+          file extension => .sav"""
+
+    @test colmetavalues(d, :label) ==
+        ["character", "numeric", "date", "datetime", "labeled", "ordinal", "time"]
+    @test colmetavalues(d, :format) ==
+        ["A1", "F8.2", "EDATE10", "DATETIME20", "F8.2", "F8.2", "TIME8"]
+    @test colmetavalues(d, :vallabel) ==
+        ["", "", "", "", "labels0", "labels1", ""]
+    @test colmetavalues(d, :measure) == [1, 3, 3, 3, 3, 2, 3]
+    @test colmetavalues(d, :alignment) == [1, 3, 3, 3, 3, 2, 3]
 end
 
 @testset "readstat por" begin
@@ -181,29 +175,22 @@ end
            4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
            5 │      e   1000.3              missing              missing              Male               low              missing"""
 
-    @test DataAPI.hasmetadata(d)
-    meta = DataAPI.metadata(d)
-    @test meta isa Dict{String, Any}
-    @test meta ==
-        Dict("file_modified" => DateTime("2018-12-16T16:28:21"),
-             "file_extension" => ".por")
-    for col in Tables.columnnames(d)
-        @test DataAPI.hasmetadata(d, col)
-        colmeta = DataAPI.metadata(d, col)
-        @test colmeta isa Dict{String, Any}
-        @test colmeta["label"] != ""
-        @test colmeta["variable_format"] != ""
-    end
-    @test DataAPI.metadata(d, :MYLABL) ==
-        Dict("label" => "labeled", "variable_format" => "F8.2",
-             "value_label_name" => "labels0",
-             "value_labels" => Dict(2 => "Female", 1 => "Male"))
-    @test DataAPI.metadata(d, :MYORD) ==
-        Dict("label" => "ordinal", "variable_format" => "F8.2",
-             "value_label_name" => "labels1",
-             "value_labels" => Dict(2 => "medium", 3 => "high", 1 => "low"))
-    @test !DataAPI.hasmetadata(d, :col)
-    @test_throws ArgumentError DataAPI.metadata(d, :col)
+    m = metadata(d)
+    @test sprint(show, MIME("text/plain"), m) == """
+        ReadStatMeta:
+          file label     => 
+          value labels   => ["labels0", "labels1"]
+          timestamp      => 2018-12-17T01:28:21
+          file extension => .por"""
+
+    @test colmetavalues(d, :label) ==
+        ["character", "numeric", "date", "datetime", "labeled", "ordinal", "time"]
+    @test colmetavalues(d, :format) ==
+        ["A1", "F8.2", "EDATE10", "DATETIME20", "F8.2", "F8.2", "TIME8"]
+    @test colmetavalues(d, :vallabel) ==
+        ["", "", "", "", "labels0", "labels1", ""]
+    @test colmetavalues(d, :measure) == zeros(7)
+    @test colmetavalues(d, :alignment) == zeros(7)
 end
 
 @testset "readstat sas7bdat" begin
@@ -220,28 +207,19 @@ end
            4 │      d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
            5 │      e   1000.3     missing              missing      1.0      1.0              missing"""
 
-    @test DataAPI.hasmetadata(d)
-    meta = DataAPI.metadata(d)
-    @test meta isa Dict{String, Any}
-    @test meta ==
-        Dict("file_modified" => DateTime("2018-08-16T15:21:52"),
-             "file_extension" => ".sas7bdat")
-    for col in Tables.columnnames(d)
-        @test DataAPI.hasmetadata(d, col)
-        colmeta = DataAPI.metadata(d, col)
-        @test colmeta isa Dict{String, Any}
-        @test !haskey(colmeta, "label")
-        @test colmeta["variable_format"] != ""
-    end
-    # ReadStat.jl does not handle value labels for SAS at this moment
-    @test DataAPI.metadata(d, :mylabl) == Dict("variable_format" => "BEST")
-    @test_broken haskey(DataAPI.metadata(d, :mylabl), "value_label_name")
-    @test_broken haskey(DataAPI.metadata(d, :mylabl), "value_labels")
-    @test DataAPI.metadata(d, :myord) == Dict("variable_format" => "BEST")
-    @test_broken haskey(DataAPI.metadata(d, :myord), "value_label_name")
-    @test_broken haskey(DataAPI.metadata(d, :myord), "value_labels")
-    @test !DataAPI.hasmetadata(d, :col)
-    @test_throws ArgumentError DataAPI.metadata(d, :col)
+    m = metadata(d)
+    @test sprint(show, MIME("text/plain"), m) == """
+        ReadStatMeta:
+          file label     => 
+          value labels   => String[]
+          timestamp      => 2018-08-16T16:21:52
+          file extension => .sas7bdat"""
+
+    # Labels are not handled for SAS at this moment
+    @test colmetavalues(d, :format) ==
+        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
+    @test colmetavalues(d, :measure) == zeros(7)
+    @test colmetavalues(d, :alignment) == zeros(7)
 end
 
 @testset "readstat xpt" begin
@@ -258,26 +236,17 @@ end
            4 │      d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
            5 │      e   1000.3     missing              missing      1.0      1.0              missing"""
 
-    @test DataAPI.hasmetadata(d)
-    meta = DataAPI.metadata(d)
-    @test meta isa Dict{String, Any}
-    @test meta ==
-        Dict("file_modified" => DateTime("2018-08-14T08:55:46"),
-             "file_extension" => ".xpt")
-    for col in Tables.columnnames(d)
-        @test DataAPI.hasmetadata(d, col)
-        colmeta = DataAPI.metadata(d, col)
-        @test colmeta isa Dict{String, Any}
-        @test !haskey(colmeta, "label")
-        @test colmeta["variable_format"] != ""
-    end
-    # ReadStat.jl does not handle value labels for SAS at this moment
-    @test DataAPI.metadata(d, :MYLABL) == Dict("variable_format" => "BEST12")
-    @test_broken haskey(DataAPI.metadata(d, :MYLABL), "value_label_name")
-    @test_broken haskey(DataAPI.metadata(d, :MYLABL), "value_labels")
-    @test DataAPI.metadata(d, :MYORD) == Dict("variable_format" => "BEST12")
-    @test_broken haskey(DataAPI.metadata(d, :MYORD), "value_label_name")
-    @test_broken haskey(DataAPI.metadata(d, :MYORD), "value_labels")
-    @test !DataAPI.hasmetadata(d, :col)
-    @test_throws ArgumentError DataAPI.metadata(d, :col)
+    m = metadata(d)
+    @test sprint(show, MIME("text/plain"), m) == """
+        ReadStatMeta:
+          file label     => 
+          value labels   => String[]
+          timestamp      => 2018-08-14T17:55:46
+          file extension => .xpt"""
+
+    # Labels are not handled for SAS at this moment
+    @test colmetavalues(d, :format) ==
+        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20.3"]
+    @test colmetavalues(d, :measure) == zeros(7)
+    @test colmetavalues(d, :alignment) == zeros(7)
 end
