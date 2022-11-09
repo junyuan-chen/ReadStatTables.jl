@@ -56,22 +56,26 @@ end
     @test colmetavalues(d, :measure) == zeros(7)
     @test colmetavalues(d, :alignment) == zeros(7)
 
-    # Metadata related functions require DataFrames.jl v1.4 or above
     df = DataFrame(d)
     @test all(n->isequal(df[!, n], getproperty(d, n)), columnnames(d))
     df = DataFrame(d, copycols=false)
     @test all(n->df[!, n] === getproperty(d, n), columnnames(d))
-    @test metadata(df, "filelabel") == "A test file"
-    @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
-    @test colmetadata(df, :mynum, "label") == "numeric"
-    @test length(colmetadatakeys(df, :mylabl)) == fieldcount(ReadStatColMeta)
 
-    metastyle!(d, "filelabel", :note)
-    metastyle!(d, "label", :note)
-    df = DataFrame(d)
-    @test metadata(df, "filelabel", style=true) == ("A test file", :note)
-    @test metadata(df, "vallabels", style=true)[2] == :default
-    @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
+    # Metadata-related methods require DataFrames.jl v1.4 or above
+    # which requires Julia v1.6
+    if VERSION >= v"1.6"
+        @test metadata(df, "filelabel") == "A test file"
+        @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
+        @test colmetadata(df, :mynum, "label") == "numeric"
+        @test length(colmetadatakeys(df, :mylabl)) == fieldcount(ReadStatColMeta)
+
+        metastyle!(d, "filelabel", :note)
+        metastyle!(d, "label", :note)
+        df = DataFrame(d)
+        @test metadata(df, "filelabel", style=true) == ("A test file", :note)
+        @test metadata(df, "vallabels", style=true)[2] == :default
+        @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
+    end
 
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
