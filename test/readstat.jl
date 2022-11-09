@@ -252,13 +252,8 @@ end
           value labels   => String[]
         """
 
-    if VERSION >= v"1.6"
-        @test colmetavalues(d, :format) ==
-            ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20.3"]
-    else
-        @test colmetavalues(d, :format) ==
-            ["\$", "BEST", "YYMMDD", "DATETIME", "BEST", "BEST", "TIME"]
-    end
+    @test colmetavalues(d, :format) ==
+        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20.3"]
     @test colmetavalues(d, :measure) == zeros(7)
     @test colmetavalues(d, :alignment) == zeros(7)
 end
