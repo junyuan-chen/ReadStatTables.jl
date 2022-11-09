@@ -128,14 +128,11 @@ _meta(tb::ReadStatTable) = getfield(tb, :meta)
 _colmeta(tb::ReadStatTable) = getfield(tb, :colmeta)
 _colmeta(tb::ReadStatTable, key::Symbol) = getproperty(_colmeta(tb), key)
 _colmeta(tb::ReadStatTable, key::AbstractString) = getproperty(_colmeta(tb), Symbol(key))
-_colmeta(tb::ReadStatTable, i::Int, key) = _colmeta(tb, key)[i]
-_colmeta(tb::ReadStatTable, n::Symbol, key) = _colmeta(tb, key)[_lookup(tb)[n]]
-_colmeta(tb::ReadStatTable, n::String, key) = _colmeta(tb, key, Symbol(n))
+_colmeta(tb::ReadStatTable, col, key) = _colmeta(tb, key)[Tables.columnindex(tb, col)]
 _styles(tb::ReadStatTable) = getfield(tb, :styles)
 
-_colmeta!(tb::ReadStatTable, i::Int, key, v) = _colmeta(tb, key)[i] = v
-_colmeta!(tb::ReadStatTable, n::Symbol, key, v) = _colmeta(tb, key)[_lookup(tb)[n]] = v
-_colmeta!(tb::ReadStatTable, n::String, key, v) = _colmeta!(tb, key, Symbol(n), v)
+_colmeta!(tb::ReadStatTable, col, key, v) =
+    _colmeta(tb, key)[Tables.columnindex(tb, col)] = v
 
 Tables.getcolumn(tb::ReadStatTable, i::Int) = _columns(tb)[i]
 Tables.getcolumn(tb::ReadStatTable, n::Symbol) = _columns(tb)[_lookup(tb)[n]]

@@ -62,7 +62,7 @@ end
     @test all(n->df[!, n] === getproperty(d, n), columnnames(d))
 
     # Metadata-related methods require DataFrames.jl v1.4 or above
-    # which requires Julia v1.6
+    # which requires Julia v1.6 or above
     if VERSION >= v"1.6"
         @test metadata(df, "filelabel") == "A test file"
         @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
@@ -218,8 +218,15 @@ end
         """
 
     # Labels are not handled for SAS at this moment
-    @test colmetavalues(d, :format) ==
-        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
+    # ReadStat_jll.jl v1.1.8 requires Julia v1.6 or above
+    # Older versions of ReadStat_jll.jl have different results for formats
+    if VERSION >= v"1.6"
+        @test colmetavalues(d, :format) ==
+            ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
+    else
+        @test colmetavalues(d, :format) ==
+            ["\$", "BEST", "YYMMDD", "DATETIME", "BEST", "BEST", "TIME"]
+    end
     @test colmetavalues(d, :measure) == zeros(7)
     @test colmetavalues(d, :alignment) == zeros(7)
 end
@@ -245,9 +252,13 @@ end
           value labels   => String[]
         """
 
-    # Labels are not handled for SAS at this moment
-    @test colmetavalues(d, :format) ==
-        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20.3"]
+    if VERSION >= v"1.6"
+        @test colmetavalues(d, :format) ==
+            ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20.3"]
+    else
+        @test colmetavalues(d, :format) ==
+            ["\$", "BEST", "YYMMDD", "DATETIME", "BEST", "BEST", "TIME"]
+    end
     @test colmetavalues(d, :measure) == zeros(7)
     @test colmetavalues(d, :alignment) == zeros(7)
 end
