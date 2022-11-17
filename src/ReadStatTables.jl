@@ -4,13 +4,16 @@ using DataValues: DataValueVector
 using Dates
 using PrettyTables: pretty_table
 using ReadStat: read_data_file
+using StructArrays: StructVector
 using Tables
 
-import DataAPI: refarray, unwrap
+import DataAPI: refarray, unwrap, nrow, ncol, metadatasupport, colmetadatasupport,
+    metadata, metadatakeys, metadata!, colmetadata, colmetadatakeys, colmetadata!
 import PrettyTables: compact_type_str
 import Tables: columnnames
 
-export refarray, unwrap
+export refarray, unwrap, nrow, ncol, metadata, metadatakeys, metadata!,
+    colmetadata, colmetadatakeys, colmetadata!
 export Date, DateTime
 export columnnames
 
@@ -19,16 +22,15 @@ export LabeledValue,
        LabeledVector,
        labels,
 
+       AbstractMetaDict,
        ReadStatMeta,
-       varlabels,
-       varformats,
-       val_label_keys,
-       val_label_dict,
-       filelabel,
-       filetimestamp,
-       fileext,
+       ReadStatColMeta,
        ReadStatTable,
-       getmeta,
+       metastyle,
+       metastyle!,
+       MetaStyleView,
+       ColMetaIterator,
+       colmetavalues,
 
        readstat
 

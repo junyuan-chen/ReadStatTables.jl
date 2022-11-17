@@ -18,6 +18,7 @@ makedocs(
         "Manual" => [
             "Getting Started" => "man/getting-started.md",
             "Table Interface" => "man/table-interface.md",
+            "Metadata" => "man/metadata.md",
             "Value Labels" => "man/value-labels.md",
             "Date and Time Values" => "man/date-and-time-values.md"
         ],
