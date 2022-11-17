@@ -1,12 +1,13 @@
 # Getting Started
 
-Here is an introduction to the main function of ReadStatTables.jl.
+An overview of the usage of
+[ReadStatTables.jl](https://github.com/junyuan-chen/ReadStatTables.jl) is provided below.
 For instructions on installation, see [Installation](@ref).
 
 ## Reading a Data File
 
 Suppose we have a Stata `.dta` file located at `data/sample.dta`.
-To read this file into Julia, run
+To read this file into Julia:
 
 ```@repl getting-started
 using ReadStatTables
@@ -46,15 +47,17 @@ tb.mylabl
     The returned array is exactly the same array holding the data for the table.
     Therefore, modifying elements in the returned array
     will also change the data in the table.
-    To avoid such changes, please make a copy of the array first (by calling [`copy`](https://docs.julialang.org/en/v1/base/base/#Base.copy)).
+    To avoid such changes, please
+    [`copy`](https://docs.julialang.org/en/v1/base/base/#Base.copy) the array first.
 
-Some metadata for the data file are also contained in `tb`:
+Metadata for the data file can be accessed from `tb`
+using methods that are compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl).
 
 ```@repl getting-started
-getmeta(tb)
+metadata(tb)
+colmetadata(tb)
+colmetadata(tb, :myord)
 ```
-
-See [Table Interface](@ref) for more complete reference.
 
 ## Type Conversions
 
@@ -70,7 +73,7 @@ as long as the table type can be constructed with an input following
 the [Tables.jl](https://github.com/JuliaData/Tables.jl) interface.
 
 For example, to convert the table into a `DataFrame` from
-[DataFrames.jl](https://github.com/JuliaData/DataFrames.jl), we run
+[DataFrames.jl](https://github.com/JuliaData/DataFrames.jl):
 
 ```@repl getting-started
 using DataFrames
@@ -85,8 +88,7 @@ we need to determine whether we should keep the values or the labels.
 If only the labels contain the relevant information,
 we can make use of the `labels` function which returns an iterator for the labels.
 For example, to convert a `LabeledArray` to a `CategoricalArray` from
-[CategoricalArrays.jl](https://github.com/JuliaData/CategoricalArrays.jl),
-we run
+[CategoricalArrays.jl](https://github.com/JuliaData/CategoricalArrays.jl):
 
 ```@repl getting-started
 using CategoricalArrays
@@ -94,28 +96,27 @@ CategoricalArray(labels(tb.mylabl))
 ```
 
 Sometimes, the values have special meanings while the labels are not so important.
-To obtain an array of the values without the labels,
-we can call `refarray`:
+To access the array of values underlying a `LabeledArray` directly:
 
 ```@repl getting-started
 refarray(tb.mylabl)
 ```
 
-Alternatively, for a specific element type in the output array,
-we can call `convert`:
+Alternatively, convert a `LabeledArray` to an array with appropriate element type:
 
 ```@repl getting-started
 convert(Vector{Int}, tb.mylabl)
 ```
 
-In the last example, the element type of the output array has become `Int`.
+In the last example, the element type of the output array has become `Int`
+while the labels are ignored.
 
 !!! note
 
     The array returned by `refarray` (and by `convert` if element type is not converted)
     is exactly the same array underlying the `LabeledArray`.
     Therefore, modifying the elements of the array
-    will also modify the values in the original `LabeledArray`.
+    will also mutate the values in the associated `LabeledArray`.
 
 ## More Options
 

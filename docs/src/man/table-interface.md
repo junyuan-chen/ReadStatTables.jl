@@ -6,7 +6,7 @@ This page provides further details on the interface of `ReadStatTable`.
 ReadStatTable
 ```
 
-## Accessing Data in ReadStatTable
+## Data Columns
 
 Commonly used methods are supported for working with `ReadStatTable`.
 As a subtype of `Tables.AbstractColumns`,
@@ -55,36 +55,4 @@ Iterating a `ReadStatTable` directly results in iteration across columns:
 for col in tb
     println(eltype(col))
 end
-```
-
-## Accessing Metadata in ReadStatTable
-
-When calling `readstat`, a `ReadStatMeta` object,
-which collects metadata from the data file,
-is saved in the `ReadStatTable`.
-This object can be retrieved from `ReadStatTable` via `getmeta`.
-
-```@docs
-ReadStatMeta
-getmeta
-```
-
-When shown on REPL, a list of the available metadata are printed:
-
-```@repl table
-getmeta(tb)
-```
-
-Each field of `ReadStatMeta` can be accessed
-either directly from `ReadStatMeta` or from `ReadStatTable`
-via the corresponding accessor function.
-
-```@docs
-varlabels
-varformats
-val_label_keys
-val_label_dict
-filelabel
-filetimestamp
-fileext
 ```

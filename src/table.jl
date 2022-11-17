@@ -289,7 +289,7 @@ function colmetadata!(tb::ReadStatTable, col::ColumnIndex,
         key::Union{AbstractString, Symbol}, value; style=nothing)
     _colmeta!(tb, col, key, value)
     style === nothing || (metastyle!(tb, key, style))
-    return _colmeta(tb)
+    return colmetadata(tb)
 end
 
 """
