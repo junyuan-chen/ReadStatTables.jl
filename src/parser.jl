@@ -125,7 +125,7 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     if T === String
         push!(cols, fill("", N))
     elseif T === Int8
-        push!(cols, Vector{Union{T,Missing}}(missing, N))
+        push!(cols, Vector{Union{T, Missing}}(missing, N))
     elseif T <: Union{Int16, Int32}
         push!(cols, SentinelVector{T}(undef, N, typemin(T), missing))
     else
@@ -150,12 +150,8 @@ function handle_value!(obs_index::Cint, variable::Ptr{Cvoid}, value::readstat_va
         end
         # Todo: Handle the case with tagged missing
     else
-        if nrow < 1
-            _pushvalue!(cols, value, icol)
-        else
-            irow = obs_index + 1
-            @inbounds _setvalue!(cols, value, irow, icol)
-        end
+        irow = obs_index + 1
+        @inbounds _setvalue!(cols, value, irow, icol)
     end
     return READSTAT_HANDLER_OK
 end
@@ -164,15 +160,9 @@ end
 # String variables do not have value labels
 function getvalue(value::readstat_value_t)
     type = value_type(value)
-    if type === READSTAT_TYPE_INT8
-        return int8_value(value)
-    elseif type === READSTAT_TYPE_INT16
-        return int16_value(value)
-    elseif type === READSTAT_TYPE_INT32
+    if Int(type) <= 3
         return int32_value(value)
-    elseif type === READSTAT_TYPE_FLOAT
-        return float_value(value)
-    elseif type === READSTAT_TYPE_DOUBLE
+    else
         return double_value(value)
     end
 end

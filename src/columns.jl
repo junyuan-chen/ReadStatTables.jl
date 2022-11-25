@@ -101,54 +101,34 @@ Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::In
     end
 end
 
-# Directly return from setindex! is faster than return nothing at the end
 Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
         value::readstat_value_t, r::Int, c::Int)
     m, n = getfield(cols, 1)[c]
     if m === 2
         v = string_value(value)
-        return setindex!(getfield(cols, 2)[n], v, r)
+        col = getfield(cols, 2)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 3
         v = int8_value(value)
-        return setindex!(getfield(cols, 3)[n], v, r)
+        col = getfield(cols, 3)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 4
         v = int16_value(value)
-        return setindex!(getfield(cols, 4)[n], v, r)
+        col = getfield(cols, 4)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 5
         v = int32_value(value)
-        return setindex!(getfield(cols, 5)[n], v, r)
+        col = getfield(cols, 5)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 6
         v = float_value(value)
-        return setindex!(getfield(cols, 6)[n], v, r)
+        col = getfield(cols, 6)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 7
         v = double_value(value)
-        return setindex!(getfield(cols, 7)[n], v, r)
+        col = getfield(cols, 7)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     end
-end
-
-# Only used in the case when metadata do not have row count
-@inline function _pushvalue!(cols::ReadStatColumns, value::readstat_value_t, i::Int)
-    m, n = getfield(cols, 1)[i]
-    if m === 2
-        v = string_value(value)
-        push!(getfield(cols, 2)[n], v)
-    elseif m === 3
-        v = int8_value(value)
-        push!(getfield(cols, 3)[n], v)
-    elseif m === 4
-        v = int16_value(value)
-        push!(getfield(cols, 4)[n], v)
-    elseif m === 5
-        v = int32_value(value)
-        push!(getfield(cols, 5)[n], v)
-    elseif m === 6
-        v = float_value(value)
-        push!(getfield(cols, 6)[n], v)
-    elseif m === 7
-        v = double_value(value)
-        push!(getfield(cols, 7)[n], v)
-    end
-    return nothing
 end
 
 # Only used in the case when metadata do not have row count
@@ -229,7 +209,14 @@ end
 Base.push!(::ReadStatColumns, v) =
     throw(ArgumentError("data column of type $(typeof(v)) is not accepted"))
 
-Base.push!(cols::ReadStatColumns, vs...) = (foreach(v->push!(cols, v), vs); cols)
+function Base.push!(cols::ReadStatColumns, vs...)
+    if length(vs) > 1
+        for v in vs
+            push!(cols, v)
+        end
+    end
+    return cols
+end
 
 Base.iterate(cols::ReadStatColumns, state=1) =
     state > length(cols) ? nothing : (cols[state], state+1)
