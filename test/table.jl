@@ -158,9 +158,11 @@ end
         fill(READSTAT_ALIGNMENT_UNKNOWN, 8)))
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:8
-        @test ismissing(tb[i,i])
-        if i == 2
-            @test tb[2] === columns[2]
+        if i != 1
+            @test ismissing(tb[i,i])
+        end
+        if i < 3
+            @test tb[i] === columns[i]
         else
             @test tb[i] === parent(columns[i])
         end
@@ -168,11 +170,7 @@ end
     hms = fill(true, 8)
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:8
-        if i == 2
-            @test tb[2] === columns[2]
-        else
-            @test tb[i] === columns[i]
-        end
+        @test tb[i] === columns[i]
     end
 end
 

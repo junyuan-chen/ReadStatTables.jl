@@ -122,7 +122,9 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     N = max(m.row_count, 0)
     cols = _columns(tb)
     T = jltype(type)
-    if T === Int8
+    if T === String
+        push!(cols, fill("", N))
+    elseif T === Int8
         push!(cols, Vector{Union{T,Missing}}(missing, N))
     elseif T <: Union{Int16, Int32}
         push!(cols, SentinelVector{T}(undef, N, typemin(T), missing))
@@ -159,11 +161,10 @@ function handle_value!(obs_index::Cint, variable::Ptr{Cvoid}, value::readstat_va
 end
 
 # Needed for getting value labels
+# String variables do not have value labels
 function getvalue(value::readstat_value_t)
     type = value_type(value)
-    if type === READSTAT_TYPE_STRING
-        return string_value(value)
-    elseif type === READSTAT_TYPE_INT8
+    if type === READSTAT_TYPE_INT8
         return int8_value(value)
     elseif type === READSTAT_TYPE_INT16
         return int16_value(value)
@@ -173,8 +174,6 @@ function getvalue(value::readstat_value_t)
         return float_value(value)
     elseif type === READSTAT_TYPE_DOUBLE
         return double_value(value)
-    elseif type === READSTAT_TYPE_STRING_REF
-        return string_value(value)
     end
 end
 
@@ -183,8 +182,9 @@ function handle_value_label!(val_labels::Cstring, value::readstat_value_t, label
     tb = ctx.tb
     lblname = Symbol(_string(val_labels))
     lbls = get!(Dict{Any,String}, _vallabels(tb), lblname)
-    # Todo: Handle the case with tagged missing
-    lbls[getvalue(value)] = _string(label)
+    # Tentatively save tagged missing values as Char
+    val = value_is_tagged_missing(value) ? value_tag(value) : getvalue(value)
+    lbls[val] = _string(label)
     return READSTAT_HANDLER_OK
 end
 

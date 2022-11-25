@@ -153,18 +153,20 @@ value_is_missing(value::readstat_value_t, variable::Ptr{Cvoid}) =
 value_is_system_missing(value::readstat_value_t) =
     Bool(ccall((:readstat_value_is_system_missing, libreadstat),
         Cint, (readstat_value_t,), value))
+=#
 
 value_is_tagged_missing(value::readstat_value_t) =
     Bool(ccall((:readstat_value_is_tagged_missing, libreadstat),
         Cint, (readstat_value_t,), value))
 
+#=
 value_is_defined_missing(value::readstat_value_t, variable::Ptr{Cvoid}) =
     Bool(ccall((:readstat_value_is_defined_missing, libreadstat),
         Cint, (readstat_value_t, Ptr{Cvoid}), value, variable))
+=#
 
 value_tag(value::readstat_value_t) =
-    ccall((:readstat_value_tag, libreadstat), Cchar, (readstat_value_t,), value)
-=#
+    Char(ccall((:readstat_value_tag, libreadstat), Cchar, (readstat_value_t,), value))
 
 int8_value(value::readstat_value_t) =
     ccall((:readstat_int8_value, libreadstat), Int8, (readstat_value_t,), value)

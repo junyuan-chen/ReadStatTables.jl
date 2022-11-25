@@ -187,7 +187,7 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable, i::Int)
     cols = _columns(tb)
     m, n = getfield(cols, 1)[i]
     if m === 2
-        return _hasmissing(tb)[i] ? getfield(cols, 2)[n] : parent(getfield(cols, 2)[n])
+        return getfield(cols, 2)[n]
     elseif m === 3
         # Using skipmissing would make the entire getcolumn slightly slower
         return getfield(cols, 3)[n]

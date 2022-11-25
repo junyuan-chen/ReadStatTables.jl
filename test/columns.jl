@@ -1,5 +1,5 @@
 function gettestcolumns(N::Int)
-    strcol = SentinelVector{String}(undef, N)
+    strcol = fill("", N)
     int8col = Vector{Union{Int8, Missing}}(missing, N)
     int16col = SentinelVector{Int16}(undef, N)
     int32col = SentinelVector{Int32}(undef, N)
@@ -32,13 +32,19 @@ end
     for (i, (v, col)) in enumerate(zip(vals, columns))
         cols[i,i] = v
         @test cols[i,i] == v
-        cols[i,i] = missing
-        @test ismissing(cols[i,i])
+        if i > 1
+            cols[i,i] = missing
+            @test ismissing(cols[i,i])
+        end
     end
 
     for i in 1:6
         _pushmissing!(cols, i)
-        @test ismissing(cols[11,i])
+        if i == 1
+            @test cols[11,1] == ""
+        else
+            @test ismissing(cols[11,i])
+        end
     end
 
     @test iterate(cols) === (cols[1], 2)

@@ -1,5 +1,6 @@
+# Missing values for string variables are empty strings
 # Do not use SentinelVector for Int8 because of the chance of sentinel collision
-const StringColumn = SentinelVector{String, UndefInitializer, Missing, Vector{String}}
+const StringColumn = Vector{String}
 const Int8Column = Vector{Union{Int8, Missing}}
 const Int16Column = SentinelVector{Int16, Int16, Missing, Vector{Int16}}
 const Int32Column = SentinelVector{Int32, Int32, Missing, Vector{Int32}}
@@ -125,7 +126,7 @@ Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
     end
 end
 
-# Return nothing at the end is faster than return from push!
+# Only used in the case when metadata do not have row count
 @inline function _pushvalue!(cols::ReadStatColumns, value::readstat_value_t, i::Int)
     m, n = getfield(cols, 1)[i]
     if m === 2
@@ -150,11 +151,11 @@ end
     return nothing
 end
 
-# Return nothing at the end is faster than return from push!
+# Only used in the case when metadata do not have row count
 @inline function _pushmissing!(cols::ReadStatColumns, i::Int)
     m, n = getfield(cols, 1)[i]
     if m === 2
-        push!(getfield(cols, 2)[n], missing)
+        push!(getfield(cols, 2)[n], "")
     elseif m === 3
         push!(getfield(cols, 3)[n], missing)
     elseif m === 4

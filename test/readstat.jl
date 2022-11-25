@@ -89,7 +89,8 @@ end
            2 │      d     -1.4  1583-01-01
            3 │      e   1000.3     missing"""
 
-    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false)
+    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false,
+        file_encoding="UTF-8", handler_encoding="UTF-8")
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
         5×2 ReadStatTable:
          Row │       dtime         mylabl
@@ -126,6 +127,23 @@ end
            5 │        missing"""
 
     @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
+
+    alltypes = "$(@__DIR__)/../data/alltypes.dta"
+    dtype = readstat(alltypes)
+    @test eltype(dtype[1]) == LabeledValue{Union{Missing, Int8}}
+    @test eltype(dtype[2]) == LabeledValue{Union{Missing, Int16}}
+    @test eltype(dtype[3]) == LabeledValue{Union{Missing, Int32}}
+    @test eltype(dtype[4]) == LabeledValue{Union{Missing, Float32}}
+    @test eltype(dtype[5]) == LabeledValue{Union{Missing, Float64}}
+    @test eltype(dtype[6]) == String
+    @test eltype(dtype[7]) == String
+    @test length(dtype[1,7]) == 114
+    vallbls = valuelabels(dtype)
+    @test length(vallbls) == 1
+    lbls = vallbls[:testlbl]
+    @test length(lbls) == 2
+    @test lbls['a'] == "Tagged missing"
+    @test lbls[1] == "A"
 
     m = readstatmeta(dta)
     @test m.row_count == 5
