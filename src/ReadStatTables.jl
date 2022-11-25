@@ -1,9 +1,11 @@
 module ReadStatTables
 
-using DataValues: DataValueVector
+using CEnum: @cenum
 using Dates
+using Dates: unix2datetime
 using PrettyTables: pretty_table
-using ReadStat: read_data_file
+using ReadStat_jll
+using SentinelArrays: SentinelVector
 using StructArrays: StructVector
 using Tables
 
@@ -14,13 +16,14 @@ import Tables: columnnames
 
 export refarray, unwrap, nrow, ncol, metadata, metadatakeys, metadata!,
     colmetadata, colmetadatakeys, colmetadata!
-export Date, DateTime
 export columnnames
 
 export LabeledValue,
        LabeledArray,
        LabeledVector,
        labels,
+
+       ReadStatColumns,
 
        AbstractMetaDict,
        ReadStatMeta,
@@ -32,11 +35,16 @@ export LabeledValue,
        ColMetaIterator,
        colmetavalues,
 
-       readstat
+       readstat,
+       readstatmeta,
+       valuelabels
 
+include("wrappers.jl")
 include("LabeledArrays.jl")
 include("datetime.jl")
+include("columns.jl")
 include("table.jl")
+include("parser.jl")
 include("readstat.jl")
 
 end

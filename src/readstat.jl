@@ -1,87 +1,18 @@
-const extmap = Dict{String, Val}(
-    ".dta" => Val(:dta),
-    ".sav" => Val(:sav),
-    ".por" => Val(:por),
-    ".sas7bdat" => Val(:sas7bdat),
-    ".xpt" => Val(:xport)
-)
-
 """
     ColumnSelector
 
 A type union for values accepted by [`readstat`](@ref)
-for selecting either a single column or multiple columns.
-The accepted values must be either a [`ColumnIndex`](@ref)
-or a vector of [`ColumnIndex`](@ref).
+for selecting a single column or multiple columns.
+The accepted values can be of type [`ColumnIndex`](@ref),
+a `UnitRange` of integers, an array or a set of [`ColumnIndex`](@ref).
 """
-const ColumnSelector = Union{ColumnIndex, AbstractVector{<:Union{ColumnIndex}}}
-
-function _parse_usecols(file, usecols::Union{Symbol, String})
-    c = findfirst(x->x==Symbol(usecols), file.headers)
-    c === nothing && throw(ArgumentError("column name $usecols is not found"))
-    return c:c
-end
-
-function _parse_usecols(file, usecols::AbstractVector{<:Union{Symbol, String}})
-    lookup = Dict(n=>i for (i, n) in enumerate(file.headers))
-    icols = Vector{Int}(undef, length(usecols))
-    for (i, c) in enumerate(usecols)
-        k = get(lookup, Symbol(c), 0)
-        k == 0 && throw(ArgumentError("column name $c is not found"))
-        icols[i] = k
-    end
-    return icols
-end
-
-function _parse_usecols(file, usecols::Integer)
-    N = length(file.data)
-    0 < usecols <= N || throw(ArgumentError("invalid column index $usecols"))
-    return usecols:usecols
-end
-
-function _parse_usecols(file, usecols::AbstractVector{<:Integer})
-    N = length(file.data)
-    for c in usecols
-        0 < c <= N || throw(ArgumentError("invalid column index $c"))
-    end
-    return usecols
-end
-
-_selected(i::Int, n::Symbol, sel::Bool) = sel
-_selected(i::Int, n::Symbol, sel::Integer) = i == sel
-_selected(i::Int, n::Symbol, sel::Symbol) = n == sel
-_selected(i::Int, n::Symbol, sel::AbstractVector{<:Integer}) = i in sel
-_selected(i::Int, n::Symbol, sel::AbstractVector{Symbol}) = n in sel
-
-function _to_array!(d::DataValueVector, a::Vector, imissing::Int, missingvalue)
-    if imissing > 1
-        @inbounds for i in 1:imissing-1
-            a[i] = d.values[i]
-        end
-    end
-    @inbounds for i in imissing:length(d)
-        a[i] = d.isna[i] ? missingvalue : d.values[i]
-    end
-end
-
-function _to_array(d::DataValueVector, missingvalue)
-    N = length(d)
-    imissing = findfirst(d.isna)
-    if imissing === nothing
-        return d.values, false
-    else
-        V = promote_type(typeof(d).parameters[1], typeof(missingvalue))
-        a = Vector{V}(undef, N)
-        _to_array!(d, a, imissing, missingvalue)
-        return a, true
-    end
-end
+const ColumnSelector = Union{ColumnIndex, UnitRange, AbstractArray, AbstractSet}
 
 """
     readstat(filepath::AbstractString; kwargs...)
 
-Return a [`ReadStatTable`](@ref) that collects data from a supported data file
-located at `filepath`.
+Return a [`ReadStatTable`](@ref) that collects data (including metadata)
+from a supported data file located at `filepath`.
 
 # Accepted File Extensions
 - Stata: `.dta`.
@@ -89,69 +20,93 @@ located at `filepath`.
 - SPSS: `.sav` and `por`.
 
 # Keywords
-- `usecols::Union{ColumnSelector, Nothing} = nothing`: only keep data from the specified columns (variables); keep all columns if `usecols=nothing`.
-- `convert_datetime::Union{Bool, ColumnSelector} = true`: convert data from the specified columns to `Date` or `DateTime` if they are recorded in supported time formats; if specified as `true` (`false`), always (never) convert the data whenever possible.
-- `apply_value_labels::Union{Bool, ColumnSelector} = true`: convert data from the specified columns to [`LabeledArray`](@ref) with their value labels; if specified as `true` (`false`), always (never) convert the data whenever possible.
-- `missingvalue = missing`: value used to fill any missing value (should be `missing` unless in special circumstances).
+- `usecols::Union{ColumnSelector, Nothing} = nothing`: only collect data from the specified columns (variables); collect all columns if `usecols=nothing`.
+- `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
+- `row_offset::Union{Integer, Nothing} = nothing`: specify the offset for the first row to be read; start from the first row (`row_offset=0`) if `row_offset=nothing`.
+- `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
+- `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
+- `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
 function readstat(filepath::AbstractString;
         usecols::Union{ColumnSelector, Nothing} = nothing,
-        convert_datetime::Union{Bool, ColumnSelector} = true,
-        apply_value_labels::Union{Bool, ColumnSelector} = true,
-        missingvalue = missing)
+        row_limit::Union{Integer, Nothing} = nothing,
+        row_offset::Union{Integer, Nothing} = nothing,
+        convert_datetime::Bool = true,
+        file_encoding::Union{String, Nothing} = nothing,
+        handler_encoding::Union{String, Nothing} = nothing)
 
-    ext = lowercase(splitext(filepath)[2])
-    filetype = get(extmap, ext, nothing)
-    filetype === nothing && throw(ArgumentError("file extension $ext is not supported"))
-    file = read_data_file(filepath, filetype)
-    if usecols === nothing
-        icols = 1:length(file.data)
-        names = file.headers
-    else
-        icols = _parse_usecols(file, usecols)
-        names = [file.headers[i] for i in icols]
+    typeof(usecols) <: ColumnIndex && (usecols = (usecols,))
+    if !(typeof(usecols) <: Union{UnitRange, Nothing})
+        usecols = Set{Union{Int,Symbol}}(
+            idx isa Integer ? Int(idx) : Symbol(idx) for idx in usecols)
     end
-    convert_datetime isa AbstractVector{String} &&
-        (convert_datetime = Symbol.(convert_datetime))
-    # ReadStat.jl does not handle value labels for SAS at this moment
-    (filetype == Val(:sas7bdat) || filetype == Val(:xport)) &&
-        (apply_value_labels = false)
-    apply_value_labels isa AbstractVector{String} &&
-        (apply_value_labels = Symbol.(apply_value_labels))
-
-    cols = Vector{AbstractVector}(undef, length(icols))
-    @inbounds for (i, c) in enumerate(icols)
-        col, hasmissing = _to_array(file.data[c], missingvalue)
-        n = names[i]
-        if _selected(c, n, convert_datetime)
-            format = file.formats[c]
-            filetype == Val(:dta) && (format = first(format, 3))
-            dtpara = get(dt_formats[filetype], format, nothing)
+    ctx = _parse_all(filepath, usecols, row_limit, row_offset,
+        file_encoding, handler_encoding)
+    tb = ctx.tb
+    cols = _columns(tb)
+    m = _meta(tb)
+    ext = m.file_ext
+    dtformats = dt_formats[ext]
+    isdta = ext == ".dta"
+    if convert_datetime
+        @inbounds for i in 1:ncol(tb)
+            format = _colmeta(tb, i, :format)
+            isdta && (format = first(format, 3))
+            dtpara = get(dtformats, format, nothing)
             if dtpara !== nothing
-                if hasmissing
-                    col = parse_datetime(col, dtpara..., missingvalue)
-                else
-                    col = parse_datetime(col, dtpara...)
+                epoch, delta = dtpara
+                col0 = cols[i]
+                col = parse_datetime(col0, epoch, delta, _hasmissing(tb)[i])
+                if epoch isa Date
+                    push!(cols.date, col)
+                    cols.index[i] = (8, length(cols.date))
+                    empty!(col0)
+                elseif epoch isa DateTime
+                    push!(cols.time, col)
+                    cols.index[i] = (9, length(cols.time))
+                    empty!(col0)
                 end
             end
         end
-        if _selected(c, n, apply_value_labels)
-            lblname = file.val_label_keys[c]
-            if lblname != ""
-                lbls = convert(Dict{eltype(col), String}, file.val_label_dict[lblname])
-                col = LabeledArray(col, lbls)
-            end
-        end
-        cols[i] = col
     end
-    meta = ReadStatMeta(file.filelabel, file.val_label_dict, file.timestamp, ext)
-    if usecols === nothing
-        colmeta = StructVector{ReadStatColMeta}((file.labels, file.formats,
-            file.val_label_keys, file.measures, file.alignments, file.storagewidths))
-    else
-        colmeta = StructVector{ReadStatColMeta}(map(x->view(x, icols),
-            (file.labels, file.formats, file.val_label_keys, file.measures, file.alignments,
-            file.storagewidths)))
-    end
-    return ReadStatTable(cols, names, meta, colmeta, Dict{Symbol,Symbol}())
+    return tb
+end
+
+"""
+    readstatmeta(filepath::AbstractString; kwargs...)
+
+Return a [`ReadStatMeta`](@ref) that collects file-level metadata
+without reading the full data
+from a supported data file located at `filepath`.
+
+# Accepted File Extensions
+- Stata: `.dta`.
+- SAS: `.sas7bdat` and `.xpt`.
+- SPSS: `.sav` and `por`.
+
+# Keywords
+- `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
+- `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
+"""
+function readstatmeta(filepath::AbstractString;
+        file_encoding::Union{String, Nothing} = nothing,
+        handler_encoding::Union{String, Nothing} = nothing)
+    ext = lowercase(splitext(filepath)[2])
+    parse_ext = get(ext2parser, ext, nothing)
+    parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
+    m = ReadStatMeta()
+    m.file_ext = ext
+    ctx = Ref{ReadStatMeta}(m)
+    parser = parser_init()
+    set_metadata_handler(parser, @cfunction(handle_metadata!,
+        readstat_handler_status, (Ptr{Cvoid}, Ref{ReadStatMeta})))
+    set_note_handler(parser, @cfunction(handle_note!,
+        readstat_handler_status, (Cint, Cstring, Ref{ReadStatMeta})))
+    file_encoding === nothing ||
+        _error(set_file_character_encoding(parser, file_encoding))
+    handler_encoding === nothing ||
+        _error(set_handler_character_encoding(parser, handler_encoding))
+    _error(parse_ext(parser, filepath, ctx))
+    parser_free(parser)
+    return m
 end

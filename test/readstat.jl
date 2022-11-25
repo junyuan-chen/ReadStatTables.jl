@@ -1,14 +1,8 @@
-@testset "_parse_usecols" begin
-    dta = "$(@__DIR__)/../data/sample.dta"
-    f = read_dta(dta)
-    @test _parse_usecols(f, :dtime) == _parse_usecols(f, "dtime") == 4:4
-    @test_throws ArgumentError _parse_usecols(f, :time)
-    @test _parse_usecols(f, [:dtime]) == _parse_usecols(f, ["dtime"]) == [4]
-    @test_throws ArgumentError _parse_usecols(f, [:time])
-    @test _parse_usecols(f, 1) == 1:1
-    @test_throws ArgumentError _parse_usecols(f, 8)
-    @test _parse_usecols(f, [1, 2]) == 1:2
-    @test_throws ArgumentError _parse_usecols(f, 1:8)
+@testset "ReadStat API" begin
+    @test error_message(ReadStatTables.READSTAT_OK) == ""
+    @test error_message(ReadStatTables.READSTAT_ERROR_OPEN) == "Unable to open file"
+
+    @test_throws ErrorException _error(READSTAT_ERROR_OPEN)
 end
 
 @testset "readstat dta" begin
@@ -26,15 +20,15 @@ end
            5 │      e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
 
     m = metadata(d)
-    @test m["vallabels"]["mylabl"] == d.mylabl.labels
-    @test minute(m.timestamp) == 36
+    @test valuelabels(d, :mylabl) == d.mylabl.labels
+    @test minute(m.modified_time) == 36
     @test sprint(show, m) == "ReadStatMeta(A test file, .dta)"
     # Timestamp displays different values depending on time zone
-    @test sprint(show, MIME("text/plain"), m)[1:86] == """
+    @test sprint(show, MIME("text/plain"), m)[1:83] == """
         ReadStatMeta:
-          file label     => A test file
-          value labels   => ["mylabl", "myord"]
-        """
+          row count           => 5
+          var count           => 7
+          modified time"""
 
     ms = colmetadata(d)
     @test length(ms) == 7
@@ -45,16 +39,16 @@ end
 
     @test colmetadata(d, :myord, "label") == "ordinal"
     @test colmetadata(d, :mytime, :format) == "%tcHH:MM:SS"
-    @test colmetadata(d, :mylabl, "vallabel") == "mylabl"
+    @test colmetadata(d, :mylabl, "vallabel") == :mylabl
 
     @test colmetavalues(d, :label) ==
         ["character", "numeric", "date", "datetime", "labeled", "ordinal", "time"]
     @test colmetavalues(d, :format) ==
         ["%-1s", "%16.2f", "%td", "%tc", "%16.0f", "%16.0f", "%tcHH:MM:SS"]
     @test colmetavalues(d, "vallabel") ==
-        ["", "", "", "", "mylabl", "myord", ""]
-    @test colmetavalues(d, :measure) == zeros(7)
-    @test colmetavalues(d, :alignment) == zeros(7)
+        [Symbol(), Symbol(), Symbol(), Symbol(), :mylabl, :myord, Symbol()]
+    @test Int.(colmetavalues(d, :measure)) == zeros(7)
+    @test Int.(colmetavalues(d, :alignment)) == [1, 3, 3, 3, 3, 3, 3]
 
     df = DataFrame(d)
     @test all(n->isequal(df[!, n], getproperty(d, n)), columnnames(d))
@@ -64,74 +58,81 @@ end
     # Metadata-related methods require DataFrames.jl v1.4 or above
     # which requires Julia v1.6 or above
     if VERSION >= v"1.6"
-        @test metadata(df, "filelabel") == "A test file"
+        @test metadata(df, "file_label") == "A test file"
         @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
         @test colmetadata(df, :mynum, "label") == "numeric"
         @test length(colmetadatakeys(df, :mylabl)) == fieldcount(ReadStatColMeta)
 
-        metastyle!(d, "filelabel", :note)
+        metastyle!(d, "file_label", :note)
         metastyle!(d, "label", :note)
         df = DataFrame(d)
-        @test metadata(df, "filelabel", style=true) == ("A test file", :note)
-        @test metadata(df, "vallabels", style=true)[2] == :default
+        @test metadata(df, "file_label", style=true) == ("A test file", :note)
+        @test metadata(df, "modified_time", style=true)[2] == :default
         @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
     end
 
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
     @test isempty(colmetadata(d))
-    @test length(metadata(d, "vallabels")) == 2
+    @test length(valuelabels(d)) == 2
 
-    d = readstat(dta, usecols=1:3, convert_datetime=3)
+    d = readstat(dta, usecols=1:3, row_offset=10)
+    @test size(d) == (0, 3)
+
+    d = readstat(dta, usecols=1:3, row_limit=3, row_offset=2, convert_datetime=true)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-        5×3 ReadStatTable:
+        3×3 ReadStatTable:
          Row │ mychar    mynum      mydate
              │ String  Float64       Date?
         ─────┼─────────────────────────────
-           1 │      a      1.1  2018-05-06
-           2 │      b      1.2  1880-05-06
-           3 │      c  -1000.3  1960-01-01
-           4 │      d     -1.4  1583-01-01
-           5 │      e   1000.3     missing"""
+           1 │      c  -1000.3  1960-01-01
+           2 │      d     -1.4  1583-01-01
+           3 │      e   1000.3     missing"""
 
-    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false, apply_value_labels=10:20)
+    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
         5×2 ReadStatTable:
-         Row │       dtime  mylabl
-             │    Float64?    Int8
-        ─────┼─────────────────────
-           1 │  1.84122e12       1
-           2 │  -2.5136e12       2
-           3 │         0.0       1
-           4 │ -1.18969e13       2
-           5 │     missing       1"""
+         Row │       dtime         mylabl
+             │    Float64?  Labeled{Int8}
+        ─────┼────────────────────────────
+           1 │  1.84122e12           Male
+           2 │  -2.5136e12         Female
+           3 │         0.0           Male
+           4 │ -1.18969e13         Female
+           5 │     missing           Male"""
 
-    d = readstat(dta, usecols=["dtime", "mylabl"], convert_datetime=:dtime, apply_value_labels=["mylabl"])
+    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), convert_datetime=true)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-            5×2 ReadStatTable:
-             Row │               dtime         mylabl
-                 │           DateTime?  Labeled{Int8}
-            ─────┼────────────────────────────────────
-               1 │ 2018-05-06T10:10:10           Male
-               2 │ 1880-05-06T10:10:10         Female
-               3 │ 1960-01-01T00:00:00           Male
-               4 │ 1583-01-01T00:00:00         Female
-               5 │             missing           Male"""
+        5×2 ReadStatTable:
+         Row │               dtime         mylabl
+             │           DateTime?  Labeled{Int8}
+        ─────┼────────────────────────────────────
+           1 │ 2018-05-06T10:10:10           Male
+           2 │ 1880-05-06T10:10:10         Female
+           3 │ 1960-01-01T00:00:00           Male
+           4 │ 1583-01-01T00:00:00         Female
+           5 │             missing           Male"""
 
-    d = readstat(dta, usecols=:myord, missingvalue=0)
-    @test d.myord.values[5] == 0
+    d = readstat(dta, usecols=:myord)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
         5×1 ReadStatTable:
          Row │          myord
-             │ Labeled{Int64}
+             │ Labeled{Int8?}
         ─────┼────────────────
            1 │            low
            2 │         medium
            3 │           high
            4 │            low
-           5 │              0"""
-    
+           5 │        missing"""
+
     @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
+
+    m = readstatmeta(dta)
+    @test m.row_count == 5
+    @test m.var_count == 7
+    @test m.file_format_version == 118
+    @test m.file_label == "A test file"
+    @test m.file_ext == ".dta"
 end
 
 @testset "readstat sav" begin
@@ -149,20 +150,28 @@ end
            5 │      e   1000.3              missing              missing              Male               low              missing"""
 
     m = metadata(d)
-    @test sprint(show, MIME("text/plain"), m)[1:78] == """
+    @test sprint(show, MIME("text/plain"), m)[1:83] == """
         ReadStatMeta:
-          file label     => 
-          value labels   => ["labels0", "labels1"]
-        """
+          row count           => 5
+          var count           => 7
+          modified time"""
 
     @test colmetavalues(d, :label) ==
         ["character", "numeric", "date", "datetime", "labeled", "ordinal", "time"]
     @test colmetavalues(d, :format) ==
         ["A1", "F8.2", "EDATE10", "DATETIME20", "F8.2", "F8.2", "TIME8"]
     @test colmetavalues(d, :vallabel) ==
-        ["", "", "", "", "labels0", "labels1", ""]
-    @test colmetavalues(d, :measure) == [1, 3, 3, 3, 3, 2, 3]
-    @test colmetavalues(d, :alignment) == [1, 3, 3, 3, 3, 2, 3]
+        [Symbol(), Symbol(), Symbol(), Symbol(), :labels0, :labels1, Symbol()]
+    @test Int.(colmetavalues(d, :measure)) == [1, 3, 3, 3, 3, 2, 3]
+    @test Int.(colmetavalues(d, :alignment)) == [0, 0, 0, 0, 0, 0, 0]
+
+    m = readstatmeta(sav)
+    @test m.row_count == 5
+    @test m.var_count == 7
+    @test m.file_format_version == 2
+    @test m.notes == ["some test text as notes", "   (Entered 15-Aug-2018)",
+        "some other comments", "   (Entered 15-Aug-2018)"]
+    @test m.file_ext == ".sav"
 end
 
 @testset "readstat por" begin
@@ -180,20 +189,28 @@ end
            5 │      e   1000.3              missing              missing              Male               low              missing"""
 
     m = metadata(d)
-    @test sprint(show, MIME("text/plain"), m)[1:78] == """
+    @test sprint(show, MIME("text/plain"), m)[1:84] == """
         ReadStatMeta:
-          file label     => 
-          value labels   => ["labels0", "labels1"]
-        """
+          row count           => -1
+          var count           => 7
+          modified time"""
 
     @test colmetavalues(d, :label) ==
         ["character", "numeric", "date", "datetime", "labeled", "ordinal", "time"]
     @test colmetavalues(d, :format) ==
         ["A1", "F8.2", "EDATE10", "DATETIME20", "F8.2", "F8.2", "TIME8"]
     @test colmetavalues(d, :vallabel) ==
-        ["", "", "", "", "labels0", "labels1", ""]
-    @test colmetavalues(d, :measure) == zeros(7)
-    @test colmetavalues(d, :alignment) == zeros(7)
+        [Symbol(), Symbol(), Symbol(), Symbol(), :labels0, :labels1, Symbol()]
+    @test Int.(colmetavalues(d, :measure)) == zeros(7)
+    @test Int.(colmetavalues(d, :alignment)) == zeros(7)
+
+    m = readstatmeta(por)
+    @test m.row_count == -1
+    @test m.var_count == 7
+    @test m.file_format_version == 0
+    @test m.notes == ["some test text as notes", "   (Entered 15-Aug-2018)",
+        "some other comments", "   (Entered 15-Aug-2018)"]
+    @test m.file_ext == ".por"
 end
 
 @testset "readstat sas7bdat" begin
@@ -211,11 +228,11 @@ end
            5 │      e   1000.3     missing              missing      1.0      1.0              missing"""
 
     m = metadata(d)
-    @test sprint(show, MIME("text/plain"), m)[1:64] == """
+    @test sprint(show, MIME("text/plain"), m)[1:83] == """
         ReadStatMeta:
-          file label     => 
-          value labels   => String[]
-        """
+          row count           => 5
+          var count           => 7
+          modified time"""
 
     # Labels are not handled for SAS at this moment
     # ReadStat_jll.jl v1.1.8 requires Julia v1.6 or above
@@ -227,8 +244,15 @@ end
         @test colmetavalues(d, :format) ==
             ["\$", "BEST", "YYMMDD", "DATETIME", "BEST", "BEST", "TIME"]
     end
-    @test colmetavalues(d, :measure) == zeros(7)
-    @test colmetavalues(d, :alignment) == zeros(7)
+    @test Int.(colmetavalues(d, :measure)) == zeros(7)
+    @test Int.(colmetavalues(d, :alignment)) == zeros(7)
+
+    m = readstatmeta(sas7)
+    @test m.row_count == 5
+    @test m.var_count == 7
+    @test m.file_format_version == 9
+    @test m.table_name == "SAMPLE"
+    @test m.file_ext == ".sas7bdat"
 end
 
 @testset "readstat xpt" begin
@@ -246,14 +270,24 @@ end
            5 │      e   1000.3     missing              missing      1.0      1.0              missing"""
 
     m = metadata(d)
-    @test sprint(show, MIME("text/plain"), m)[1:64] == """
+    @test m.table_name == "SAMPLE"
+    @test sprint(show, MIME("text/plain"), m)[1:84] == """
         ReadStatMeta:
-          file label     => 
-          value labels   => String[]
-        """
+          row count           => -1
+          var count           => 7
+          modified time"""
+    @test sprint(show, MIME("text/plain"), m)[144:172] ==
+        "table name          => SAMPLE"
 
     @test colmetavalues(d, :format) ==
         ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20.3"]
-    @test colmetavalues(d, :measure) == zeros(7)
-    @test colmetavalues(d, :alignment) == zeros(7)
+    @test Int.(colmetavalues(d, :measure)) == zeros(7)
+    @test Int.(colmetavalues(d, :alignment)) == ones(7)
+
+    m = readstatmeta(xpt)
+    @test m.row_count == -1
+    @test m.var_count == 7
+    @test m.file_format_version == 5
+    @test m.table_name == "SAMPLE"
+    @test m.file_ext == ".xpt"
 end
