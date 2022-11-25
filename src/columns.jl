@@ -209,14 +209,7 @@ end
 Base.push!(::ReadStatColumns, v) =
     throw(ArgumentError("data column of type $(typeof(v)) is not accepted"))
 
-function Base.push!(cols::ReadStatColumns, vs...)
-    if length(vs) > 1
-        for v in vs
-            push!(cols, v)
-        end
-    end
-    return cols
-end
+Base.push!(cols::ReadStatColumns, vs...) = (foreach(v->push!(cols, v), vs); cols)
 
 Base.iterate(cols::ReadStatColumns, state=1) =
     state > length(cols) ? nothing : (cols[state], state+1)

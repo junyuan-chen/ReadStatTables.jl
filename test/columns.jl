@@ -7,7 +7,7 @@ function gettestcolumns(N::Int)
     doublecol = SentinelVector{Float64}(undef, N)
     datecol = SentinelVector{Date}(undef, N)
     timecol = SentinelVector{DateTime}(undef, N)
-    return [strcol, int8col, int16col, int32col, floatcol, doublecol, datecol, timecol]
+    return (strcol, int8col, int16col, int32col, floatcol, doublecol, datecol, timecol)
 end
 
 @testset "ReadStatColumns" begin
