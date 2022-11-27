@@ -1,6 +1,6 @@
 @testset "LabeledValue" begin
-    lbls1 = Dict(1=>"a", 2=>"b")
-    lbls2 = Dict{Union{Float64, Missing}, String}(1.0=>"b")
+    lbls1 = Dict{Any,String}(1=>"a", 2=>"b")
+    lbls2 = Dict{Any,String}(1.0=>"b")
     v1 = LabeledValue(1, lbls1)
     v2 = LabeledValue(2, lbls1)
     v3 = LabeledValue(1.0, lbls2)
@@ -52,8 +52,8 @@ end
 
 @testset "LabeledArray" begin
     vals = repeat(1:3, inner=2)
-    lbls = Dict(i=>string(i) for i in 1:3)
-    x = LabeledArray{Int, 1}(vals, lbls)
+    lbls = Dict{Any,String}(i=>string(i) for i in 1:3)
+    x = LabeledArray(vals, lbls)
     @test eltype(x) == LabeledValue{Int}
     @test size(x) == (6,)
     @test IndexStyle(typeof(x)) == IndexLinear()
@@ -61,10 +61,10 @@ end
     @test x[1] === LabeledValue(1, lbls)
     @test x[2:3] == [1, 2]
     @test x[isodd.(1:6)] == [1, 2, 3]
-    @test_throws ArgumentError LabeledArray(string.(vals), Dict{String,String}())
+    @test_throws ArgumentError LabeledArray(string.(vals), Dict{Any,String}())
 
     vals1 = [1, 2, missing]
-    x1 = LabeledArray(vals1, convert(Dict{Union{Int,Missing},String}, lbls))
+    x1 = LabeledArray(vals1, lbls)
     @test isequal(x1[3], missing)
     @test x1[3] == "missing"
 

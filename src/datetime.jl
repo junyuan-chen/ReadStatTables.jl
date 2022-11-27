@@ -52,40 +52,36 @@ const spss_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
         ((spss_epoch_time, Second(1)),)
 )
 
-const dt_formats = Dict{Val, Dict}(
-    Val(:dta) => stata_dt_formats,
-    Val(:sav) => spss_dt_formats,
-    Val(:por) => spss_dt_formats,
-    Val(:sas7bdat) => sas_dt_formats,
-    Val(:xport) => sas_dt_formats
+const dt_formats = Dict{String, Dict}(
+    ".dta" => stata_dt_formats,
+    ".sav" => spss_dt_formats,
+    ".por" => spss_dt_formats,
+    ".sas7bdat" => sas_dt_formats,
+    ".xpt" => sas_dt_formats
 )
 
 """
-    parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period)
-    parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period, missingvalue)
+    parse_datetime(col, epoch::Union{DateTime,Date}, delta::Period, hasmissing::Bool)
 
 Construct a vector of time values of type `DateTime` or `Date`
 by interpreting the elements in `col` as the number of periods passed
 since `epoch` with the length of each period being `delta`.
-If `missingvalue` is specified,
-indices where the elements in `col` are equal to `missingvalue` based on `isequal`
-are set to be `missing` no matter what is specified with `missingvalue`.
+Returned object is of a type acceptable by [`ReadStatColumns`](@ref).
 """
-function parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period)
-    out = Vector{typeof(epoch)}(undef, length(col))
-    @inbounds for i in eachindex(col)
-        v = col[i]
-        out[i] = epoch + v * delta
-    end
-    return out
-end
-
-# Missing value is set to be missing no matter what is specified with missingvalue
-function parse_datetime(col::Vector, epoch::Union{DateTime,Date}, delta::Period, missingvalue)
-    out = Vector{Union{typeof(epoch), Missing}}(undef, length(col))
-    @inbounds for i in eachindex(col)
-        v = col[i]
-        out[i] = isequal(v, missingvalue) ? missing : epoch + v * delta
+function parse_datetime(col::AbstractVector, epoch::Union{DateTime,Date}, delta::Period,
+        hasmissing::Bool)
+    out = SentinelVector{typeof(epoch)}(undef, length(col))
+    if hasmissing
+        @inbounds for i in eachindex(col)
+            v = col[i]
+            out[i] = ismissing(v) ? missing : epoch + v * delta
+        end
+    else
+        tar = parent(out)
+        @inbounds for i in eachindex(col)
+            v = col[i]
+            tar[i] = epoch + v * delta
+        end
     end
     return out
 end

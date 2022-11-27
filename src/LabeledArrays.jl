@@ -43,7 +43,7 @@ true
 """
 struct LabeledValue{T}
     value::T
-    labels::Dict{T, String}
+    labels::Dict{Any, String}
 end
 
 # A value is not guaranteed to have a label defined in labels
@@ -161,24 +161,22 @@ julia> x == ["0", "a", "b"]
 true
 ```
 """
-struct LabeledArray{V, N, T<:LabeledValue} <: AbstractArray{T, N}
-    values::Array{V, N}
-    labels::Dict{V, String}
-    function LabeledArray{V,N}(values::Array{V,N}, labels::Dict{V,String}) where {V,N}
+struct LabeledArray{V, N, T<:LabeledValue, A} <: AbstractArray{T, N}
+    values::A
+    labels::Dict{Any, String}
+    function LabeledArray(values::AbstractArray{V,N},
+            labels::Dict{Any,String}) where {V,N}
         V <: AbstractString && throw(ArgumentError("values of type $V are not accepted"))
-        return new{V,N,LabeledValue{V}}(values, labels)
+        return new{V,N,LabeledValue{V},typeof(values)}(values, labels)
     end
 end
 
 """
-    LabeledVector{V, T}
+    LabeledVector{V, T, A}
 
-Alias for [`LabeledArray{V, 1, T}`](@ref).
+Alias for [`LabeledArray{V, 1, T, A}`](@ref).
 """
-const LabeledVector{V, T} = LabeledArray{V, 1, T}
-
-LabeledArray(values::Array{V,N}, labels::Dict{V,String}) where {V,N} =
-    LabeledArray{V,N}(values, labels)
+const LabeledVector{V, T, A} = LabeledArray{V, 1, T, A}
 
 Base.size(x::LabeledArray) = size(x.values)
 Base.IndexStyle(::Type{<:LabeledArray}) = IndexLinear()
@@ -264,8 +262,8 @@ Base.:(==)(x::AbstractArray, y::LabeledArray) = x == y.values
 Base.:(==)(x::LabeledArray, y::AbstractArray{<:AbstractString}) = labels(x) == y
 Base.:(==)(x::AbstractArray{<:AbstractString}, y::LabeledArray) = x == labels(y)
 
-Base.copy(x::LabeledArray{V,N}) where {V,N} =
-    LabeledArray{V,N}(copy(x.values), copy(x.labels))
+Base.copy(x::LabeledArray) =
+    LabeledArray(copy(x.values), copy(x.labels))
 
 Base.convert(::Type{Array{V1,N}}, x::LabeledArray{V2,N}) where {V1,V2,N} =
     convert(Array{V1}, x.values)

@@ -29,8 +29,8 @@ metadata(tb)
 The value associated with a specific metadata key can be retrieved via:
 
 ```@repl meta
-metadata(tb, "filelabel")
-metadata(tb, "filelabel", style=true)
+metadata(tb, "file_label")
+metadata(tb, "file_label", style=true)
 ```
 
 To obtain a complete list of metadata keys:
@@ -43,7 +43,7 @@ Metadata contained in a `ReadStatMeta` can be modified,
 optionally with a metadata style set at the same time:
 
 ```@repl meta
-metadata!(tb, "filelabel", "A file label", style=:note)
+metadata!(tb, "file_label", "A file label", style=:note)
 ```
 
 Since `ReadStatMeta` has a dictionary-like interface,
@@ -52,8 +52,8 @@ one can also directly work with it:
 ```@repl meta
 m = metadata(tb)
 keys(m)
-m["filelabel"]
-m["filelabel"] = "A new file label"
+m["file_label"]
+m["file_label"] = "A new file label"
 copy(m)
 ```
 
@@ -151,7 +151,7 @@ All metadata associated with keys not listed above are of `:default` style.
 To modify the metadata style for those associated with a given key:
 
 ```@repl meta
-metastyle!(tb, "timestamp", :note)
+metastyle!(tb, "modified_time", :note)
 ```
 
 The same method is also used for variable-specific metadata.
