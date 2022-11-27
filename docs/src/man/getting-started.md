@@ -17,8 +17,8 @@ tb = readstat("data/sample.dta")
 Here is how we read the above result:[^1]
 
 - Variable names from the data file are displayed in the first row.
-- Element type for each variable is displayed below the corresponding variable name.
-- The values for each variable are displayed column-wise starting from the third row.
+- Element type of each variable is displayed below the corresponding variable name.
+- The values of each variable are displayed column-wise starting from the third row.
 
 Some additional details to be noted:
 
@@ -61,18 +61,17 @@ colmetadata(tb, :myord)
 
 ## Type Conversions
 
-The types provided by ReadStatTables.jl should be sufficient for basic tasks.
+The interface provided by ReadStatTables.jl allows basic tasks.
 In case more complicated operations are needed,
 it is easy to convert the objects into other types.
 
 ### Converting ReadStatTable
 
-The table returned by `readstat` is a `ReadStatTable`.
-Converting the table into another table type is easy
-as long as the table type can be constructed with an input following
-the [Tables.jl](https://github.com/JuliaData/Tables.jl) interface.
+The table returned by [`readstat`](@ref) is a [`ReadStatTable`](@ref).
+Converting a `ReadStatTable` to another table type is easy,
+thanks to the widely supported [Tables.jl](https://github.com/JuliaData/Tables.jl) interface.
 
-For example, to convert the table into a `DataFrame` from
+For example, to convert a `ReadStatTable` to a `DataFrame` from
 [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl):
 
 ```@repl getting-started
@@ -80,11 +79,22 @@ using DataFrames
 df = DataFrame(tb)
 ```
 
+Metadata contained in a `ReadStatTable` are preserved in the converted `DataFrame`
+when working with DataFrames.jl version `v1.4.0` or above,
+which supports the same [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
+interface for metadata:
+
+```@repl getting-started
+metadata(df)
+colmetadata(df, :myord)
+```
+
 ### Converting LabeledArray
 
-Variables with value labels are stored in `LabeledArray`s.
-To convert a `LabeledArray` into another array type,
-we need to determine whether we should keep the values or the labels.
+Variables with value labels are stored in [`LabeledArray`](@ref)s.
+To convert a `LabeledArray` to another array type,
+we may either obtain an array of [`LabeledValue`](@ref)s
+or collect the values and labels separately.
 If only the labels contain the relevant information,
 we can make use of the `labels` function which returns an iterator for the labels.
 For example, to convert a `LabeledArray` to a `CategoricalArray` from
@@ -126,12 +136,17 @@ The behavior of `readstat` can be adjusted by passing keyword arguments.
 readstat
 ```
 
-The values used to specify certain variables (columns)
-must be either a `ColumnIndex` or a vector of `ColumnIndex`s.
+The accepted values for selecting certain variables (columns) are shown below:
 
 ```@docs
 ReadStatTables.ColumnIndex
 ReadStatTables.ColumnSelector
+```
+
+File-level metadata can be obtained without reading the entire data file.
+
+```@docs
+readstatmeta
 ```
 
 [^1]: The printed output is generated with [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl).

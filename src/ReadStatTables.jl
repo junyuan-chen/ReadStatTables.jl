@@ -16,6 +16,7 @@ import Tables: columnnames
 
 export refarray, unwrap, nrow, ncol, metadata, metadatakeys, metadata!,
     colmetadata, colmetadatakeys, colmetadata!
+export Date, DateTime # Needed for avoiding the "Dates." qualifier when printing tables
 export columnnames
 
 export LabeledValue,

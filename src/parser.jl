@@ -7,43 +7,43 @@ mutable struct ParserContext
     usecols::Union{UnitRange, Set, Nothing}
 end
 
-parse_dta(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ParserContext}) =
+parse_dta(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ParserContext}) =
     ccall((:readstat_parse_dta, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ParserContext}), parser, path, user_ctx)
 
-parse_dta(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ReadStatMeta}) =
+parse_dta(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ReadStatMeta}) =
     ccall((:readstat_parse_dta, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ReadStatMeta}), parser, path, user_ctx)
 
-parse_sav(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ParserContext}) =
+parse_sav(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ParserContext}) =
     ccall((:readstat_parse_sav, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ParserContext}), parser, path, user_ctx)
 
-parse_sav(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ReadStatMeta}) =
+parse_sav(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ReadStatMeta}) =
     ccall((:readstat_parse_sav, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ReadStatMeta}), parser, path, user_ctx)
 
-parse_por(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ParserContext}) =
+parse_por(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ParserContext}) =
     ccall((:readstat_parse_por, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ParserContext}), parser, path, user_ctx)
 
-parse_por(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ReadStatMeta}) =
+parse_por(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ReadStatMeta}) =
     ccall((:readstat_parse_por, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ReadStatMeta}), parser, path, user_ctx)
 
-parse_sas7bdat(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ParserContext}) =
+parse_sas7bdat(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ParserContext}) =
     ccall((:readstat_parse_sas7bdat, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ParserContext}), parser, path, user_ctx)
 
-parse_sas7bdat(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ReadStatMeta}) =
+parse_sas7bdat(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ReadStatMeta}) =
     ccall((:readstat_parse_sas7bdat, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ReadStatMeta}), parser, path, user_ctx)
 
-parse_xport(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ParserContext}) =
+parse_xport(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ParserContext}) =
     ccall((:readstat_parse_xport, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ParserContext}), parser, path, user_ctx)
 
-parse_xport(parser::Ptr{Cvoid}, path::String, user_ctx::Ref{ReadStatMeta}) =
+parse_xport(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ReadStatMeta}) =
     ccall((:readstat_parse_xport, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Cstring, Ref{ReadStatMeta}), parser, path, user_ctx)
 

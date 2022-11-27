@@ -20,6 +20,24 @@ Base.get(f::Base.Callable, m::AbstractMetaDict, key) =
     ReadStatMeta <: AbstractMetaDict
 
 A collection of file-level metadata associated with a data file processed with `ReadStat`.
+
+Metadata can be retrieved and modified either through
+a dictionary-like interface or via methods compatible with `DataAPI.jl`.
+
+# Fields
+- `row_count::Int`: number of rows returned by `ReadStat` parser; being `-1` if not available in metadata; may reflect the value set with the `row_limit` parser option.
+- `var_count::Int`: number of data columns returned by `ReadStat` parser.
+- `creation_time::DateTime`: timestamp for file creation.
+- `modified_time::DateTime`: timestamp for file modification.
+- `file_format_version::Int`: version number of file format.
+- `file_format_is_64bit::Bool`: indicator for 64-bit file format; only relevant to SAS.
+- `compression::readstat_compress_t`: file compression mode; only relevant to certain file formats.
+- `endianness::readstat_endian_t`: endianness of data file.
+- `table_name::String`: name of the data table; only relevant to `.xpt` format.
+- `file_label::String`: label of data file.
+- `file_encoding::String`: character encoding of data file.
+- `notes::Vector{String}`: notes attached to data file.
+- `file_ext::String`: file extension of data file.
 """
 mutable struct ReadStatMeta <: AbstractMetaDict
     row_count::Int
@@ -67,6 +85,20 @@ end
 
 A collection of variable-level metadata associated with
 a data column processed with `ReadStat`.
+
+Metadata can be retrieved and modified via methods compatible with `DataAPI.jl`.
+A dictionary-like interface only allows retrieving the metadata.
+An alternative way to retrive and modify the metadata is via [`colmetavalues`](@ref).
+
+# Fields
+- `label::String`: variable label.
+- `format::String`: variable format.
+- `type::readstat_type_t`: original variable type recognized by `ReadStat`.
+- `vallabel::Symbol`: name of the set of value labels associated with the variable.
+- `storage_width::Csize_t`: variable storage width in data file.
+- `display_width::Cint`: width for display.
+- `measure::readstat_measure_t`: measure type of the variable; only relevant to SPSS.
+- `alignment::readstat_alignment_t`: variable display alignment.
 """
 struct ReadStatColMeta <: AbstractMetaDict
     label::String
@@ -218,7 +250,9 @@ Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     end
 end
 
-Tables.getcolumn(tb::ReadStatTable, n::Symbol) = Tables.getcolumn(tb, _lookup(tb)[n])
+Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, n::Symbol) =
+    Tables.getcolumn(tb, _lookup(tb)[n])
+
 # Avoid directly modifying names
 Tables.columnnames(tb::ReadStatTable) = copy(_names(tb))
 

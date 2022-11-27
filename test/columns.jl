@@ -19,7 +19,6 @@ end
 
     columns = gettestcolumns(10)
     push!(cols, columns...)
-    @test_throws ArgumentError push!(cols, rand(10))
     @test size(cols) == (10, 8)
     @test length(cols) == 8
     @test cols.index == [(n, 1) for n in 2:9]

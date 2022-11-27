@@ -8,10 +8,9 @@ ReadStatTable
 
 ## Data Columns
 
-Commonly used methods are supported for working with `ReadStatTable`.
-As a subtype of `Tables.AbstractColumns`,
-`ReadStatTable` also supports the essential methods defined in
-[Tables.jl](https://github.com/JuliaData/Tables.jl).
+As a subtype of `Tables.AbstractColumns`, commonly used methods
+including those defined in [Tables.jl](https://github.com/JuliaData/Tables.jl)
+are implemented for `ReadStatTable`.
 
 ```@repl table
 using ReadStatTables, Tables
@@ -56,3 +55,21 @@ for col in tb
     println(eltype(col))
 end
 ```
+
+## Data Values
+
+In addition to retrieving the data columns,
+it is possible to directly retrieving and modifying individual data values
+via `getindex` and `setindex!`.
+
+```@repl table
+tb[1,1]
+tb[1,1] = "f"
+tb[1,1]
+tb[1,:mylabl]
+tb[1,:mylabl] = 2
+tb[1,:mylabl]
+```
+
+Notice that for data columns with value labels,
+these methods only deal with the underlying values and disregard the value labels.

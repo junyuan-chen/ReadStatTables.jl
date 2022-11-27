@@ -9,7 +9,7 @@ a `UnitRange` of integers, an array or a set of [`ColumnIndex`](@ref).
 const ColumnSelector = Union{ColumnIndex, UnitRange, AbstractArray, AbstractSet}
 
 """
-    readstat(filepath::AbstractString; kwargs...)
+    readstat(filepath; kwargs...)
 
 Return a [`ReadStatTable`](@ref) that collects data (including metadata)
 from a supported data file located at `filepath`.
@@ -27,7 +27,7 @@ from a supported data file located at `filepath`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
-function readstat(filepath::AbstractString;
+function readstat(filepath;
         usecols::Union{ColumnSelector, Nothing} = nothing,
         row_limit::Union{Integer, Nothing} = nothing,
         row_offset::Union{Integer, Nothing} = nothing,
@@ -35,6 +35,8 @@ function readstat(filepath::AbstractString;
         file_encoding::Union{String, Nothing} = nothing,
         handler_encoding::Union{String, Nothing} = nothing)
 
+    # Do not restrict argument type of filepath to allow AbstractPath
+    filepath = string(filepath)
     typeof(usecols) <: ColumnIndex && (usecols = (usecols,))
     if !(typeof(usecols) <: Union{UnitRange, Nothing})
         usecols = Set{Union{Int,Symbol}}(
@@ -73,7 +75,7 @@ function readstat(filepath::AbstractString;
 end
 
 """
-    readstatmeta(filepath::AbstractString; kwargs...)
+    readstatmeta(filepath; kwargs...)
 
 Return a [`ReadStatMeta`](@ref) that collects file-level metadata
 without reading the full data
@@ -88,9 +90,10 @@ from a supported data file located at `filepath`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
-function readstatmeta(filepath::AbstractString;
+function readstatmeta(filepath;
         file_encoding::Union{String, Nothing} = nothing,
         handler_encoding::Union{String, Nothing} = nothing)
+    filepath = string(filepath)
     ext = lowercase(splitext(filepath)[2])
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
