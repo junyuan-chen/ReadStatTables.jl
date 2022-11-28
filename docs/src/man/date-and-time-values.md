@@ -18,7 +18,7 @@ The full lists of recognized date/time formats for the statistical software
 are stored as dictionary keys;
 while the associated values are tuples of reference date/time and period length.[^2]
 If a variable is in a date/time format that is contained in the dictionary keys,
-[`readstat`](@ref) will handle the conversion into a Julia time type
+[`readstat`](@ref) will handle the conversion to a Julia time type
 (unless the `convert_datetime` option prevents it).
 Otherwise, if a date/time format is not found in the dictionary keys,
 no type conversion will be attempted.
