@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Value Labels · ReadStatTables.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://junyuan-chen.github.io/ReadStatTables.jl/stable/man/value-labels/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ReadStatTables.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../getting-started/">Getting Started</a></li><li><a class="tocitem" href="../table-interface/">Table Interface</a></li><li><a class="tocitem" href="../metadata/">Metadata</a></li><li class="is-active"><a class="tocitem" href>Value Labels</a><ul class="internal"><li><a class="tocitem" href="#LabeledValue-and-LabeledArray"><span>LabeledValue and LabeledArray</span></a></li><li><a class="tocitem" href="#Accessing-Values-and-Labels"><span>Accessing Values and Labels</span></a></li></ul></li><li><a class="tocitem" href="../date-and-time-values/">Date and Time Values</a></li></ul></li><li><span class="tocitem">About</span><ul><li><a class="tocitem" href="../../license/">License</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Manual</a></li><li class="is-active"><a href>Value Labels</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Value Labels</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/main/docs/src/man/value-labels.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Value-Labels"><a class="docs-heading-anchor" href="#Value-Labels">Value Labels</a><a id="Value-Labels-1"></a><a class="docs-heading-anchor-permalink" href="#Value-Labels" title="Permalink"></a></h1><p>Value labels collected from the data files are incorporated into the associated data columns via a customized array type <a href="#ReadStatTables.LabeledArray"><code>LabeledArray</code></a>.</p><h2 id="LabeledValue-and-LabeledArray"><a class="docs-heading-anchor" href="#LabeledValue-and-LabeledArray">LabeledValue and LabeledArray</a><a id="LabeledValue-and-LabeledArray-1"></a><a class="docs-heading-anchor-permalink" href="#LabeledValue-and-LabeledArray" title="Permalink"></a></h2><p><code>LabeledValue</code> and <code>LabeledArray</code> are designed to imitate how variables associated with value labels are represented in the original data files from the statistical software. The former wraps a data array with a reference to the value labels; while the latter wraps a single data value. The element of a <code>LabeledArray</code> is always a <code>LabeledValue</code>. However, a <code>LabeledValue</code> obtained from a <code>LabeledArray</code> is only constructed when being retrieved via <code>getindex</code> for efficient storage.</p><p>Some noteworthy distinctions of a <code>LabeledArray</code> are highlighted below:</p><ul><li>Values are never re-encoded when a <code>LabeledArray</code> is constructed.<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup></li><li>It is allowed for some values in a <code>LabeledArray</code> to not have a value label.<sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup></li><li>A label is always a <code>String</code> even when it is associated with <code>missing</code>.</li></ul><p>In essence, a <code>LabeledArray</code> is simply an array of data values (typically numbers) bundled with a dictionary of value labels. There is no restriction imposed on the correspondence between the data values and value labels. Namely, a data value in a <code>LabeledArray</code> is not necessarily attached with a value label from the associated dictionary; while the key of a value label contained in the dictionary may not match any array element. Furthermore, the dictionary of value labels may be switched and shared across different <code>LabeledArray</code>s. When setting values in a <code>LabeledArray</code>, the array of data values are modified directly with no additional check on the associated dictionary of value labels. For this reason, the functionality of a <code>LabeledArray</code> is not equivalent to that of an array type designed for categorical data (e.g., <code>CategoricalArray</code> from <a href="https://github.com/JuliaData/CategoricalArrays.jl">CategoricalArrays.jl</a>). They are not complete substitutes for each other.</p><p>More details are below.</p><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.LabeledValue" href="#ReadStatTables.LabeledValue"><code>ReadStatTables.LabeledValue</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">LabeledValue{T, K}</code></pre><p>Value of type <code>T</code> associated with a dictionary of value labels with keys of type <code>K</code>. If a value <code>v</code> is not euqal (<code>==</code>) to a key in the dictionary, then <code>string(v)</code> is taken as the value label. See also <a href="#ReadStatTables.LabeledArray"><code>LabeledArray</code></a>.</p><p>The value underlying a <code>LabeledValue</code> can be accessed via <a href="#DataAPI.unwrap"><code>unwrap</code></a>. The value label can be obtained by calling <a href="#ReadStatTables.valuelabel"><code>valuelabel</code></a> or converting a <code>LabeledValue</code> to <code>String</code> via <code>convert</code>. The dictionary of value labels (typically assoicated with a data column) can be accessed via <a href="#ReadStatTables.getvaluelabels"><code>getvaluelabels</code></a>.</p><p>Comparison operators <code>==</code>, <code>isequal</code>, <code>&lt;</code>, <code>isless</code> and <code>isapprox</code> compare the underlying value of type <code>T</code> and disregard any value label. To compare the value label, use <a href="#ReadStatTables.valuelabel"><code>valuelabel</code></a> to retrieve the label first.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; lbls = Dict{Int,String}(0=&gt;&quot;a&quot;, 1=&gt;&quot;a&quot;);
+
+julia&gt; v0 = LabeledValue(0, lbls)
+0 =&gt; a
+
+julia&gt; v1 = LabeledValue(1, lbls)
+1 =&gt; a
+
+julia&gt; vm = LabeledValue(missing, lbls)
+missing =&gt; missing
+
+julia&gt; v0 == v1
+false
+
+julia&gt; v1 == 1
+true
+
+julia&gt; isequal(vm, missing)
+true
+
+julia&gt; unwrap(v0)
+0
+
+julia&gt; valuelabel(v1) == &quot;a&quot;
+true
+
+julia&gt; getvaluelabels(v1) === lbls
+true</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L1-L50">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.LabeledArray" href="#ReadStatTables.LabeledArray"><code>ReadStatTables.LabeledArray</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">LabeledArray{V, N, A&lt;:AbstractArray{V, N}, K} &lt;: AbstractArray{LabeledValue{V, K}, N}</code></pre><p><code>N</code>-dimensional dense array with elements associated with value labels.</p><p><code>LabeledArray</code> provides functionality that is similar to what value labels achieve in statistical software such as Stata. When printed to REPL, a <code>LabeledArray</code> just looks like an array of value labels. Yet, only the underlying values of type <code>V</code> are stored in an array of type <code>A</code>. The associated value labels are looked up from a dictionary of type <code>Dict{K, String}</code>. If a value <code>v</code> is not equal (<code>==</code>) to a key in the dictionary, then <code>string(v)</code> is taken as the value label. The elements of type <a href="#ReadStatTables.LabeledValue"><code>LabeledValue{V, K}</code></a> are only constructed lazily when they are retrieved.</p><p>The array of values underlying a <code>LabeledArray</code> can be accessed via <a href="#DataAPI.refarray"><code>refarray</code></a>. The dictionary of value labels assoicated with a <code>LabeledArray</code> can be accessed via <a href="#ReadStatTables.getvaluelabels"><code>getvaluelabels</code></a>. An iterator over the value labels for each element, which has the same array shape as the <code>LabeledArray</code>, can be obtained via <a href="#ReadStatTables.valuelabels"><code>valuelabels</code></a>.</p><p>Equality comparison (<code>==</code>) involving a <code>LabeledArray</code> only compares the underlying values and disregard any value label. To compare the value labels, use <a href="#ReadStatTables.valuelabels"><code>valuelabels</code></a> to obtain the labels first.</p><p>Additional array methods such as <code>push!</code>, <code>insert!</code>, <code>deleteat!</code>, <code>append!</code> are supported for <a href="#ReadStatTables.LabeledVector"><code>LabeledVector</code></a>. They are applied on the underlying array of values retrieved via <a href="#DataAPI.refarray"><code>refarray</code></a> and do not modify the dictionary of value labels.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; lbls1 = Dict(1=&gt;&quot;a&quot;, 2=&gt;&quot;b&quot;);
+
+julia&gt; lbls2 = Dict(1.0=&gt;&quot;p&quot;, 2.0=&gt;&quot;q&quot;);
+
+julia&gt; x = LabeledArray([0, 1, 2], lbls1)
+3-element LabeledVector{Int64, Vector{Int64}, Int64}:
+ 0 =&gt; 0
+ 1 =&gt; a
+ 2 =&gt; b
+
+julia&gt; y = LabeledArray([0.0, 1.0, 2.0], lbls2)
+3-element LabeledVector{Float64, Vector{Float64}, Float64}:
+ 0.0 =&gt; 0.0
+ 1.0 =&gt; p
+ 2.0 =&gt; q
+
+julia&gt; x == y
+true
+
+julia&gt; x == 0:2
+true
+
+julia&gt; refarray(x)
+3-element Vector{Int64}:
+ 0
+ 1
+ 2
+
+julia&gt; getvaluelabels(x)
+Dict{Int64, String} with 2 entries:
+  2 =&gt; &quot;b&quot;
+  1 =&gt; &quot;a&quot;
+
+julia&gt; valuelabels(x) == [&quot;0&quot;, &quot;a&quot;, &quot;b&quot;]
+true
+
+julia&gt; push!(x, 2)
+4-element LabeledVector{Int64, Vector{Int64}, Int64}:
+ 0 =&gt; 0
+ 1 =&gt; a
+ 2 =&gt; b
+ 2 =&gt; b
+
+julia&gt; deleteat!(x, 4)
+3-element LabeledVector{Int64, Vector{Int64}, Int64}:
+ 0 =&gt; 0
+ 1 =&gt; a
+ 2 =&gt; b
+
+julia&gt; append!(x, [0, 1, 2])
+6-element LabeledVector{Int64, Vector{Int64}, Int64}:
+ 0 =&gt; 0
+ 1 =&gt; a
+ 2 =&gt; b
+ 0 =&gt; 0
+ 1 =&gt; a
+ 2 =&gt; b</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L122-L215">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.LabeledVector" href="#ReadStatTables.LabeledVector"><code>ReadStatTables.LabeledVector</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">LabeledVector{V, A, K} &lt;: AbstractVector{LabeledValue{V, K}}</code></pre><p>Alias for <a href="#ReadStatTables.LabeledArray"><code>LabeledArray{V, 1, A, K}</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L223-L227">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.LabeledMatrix" href="#ReadStatTables.LabeledMatrix"><code>ReadStatTables.LabeledMatrix</code></a> — <span class="docstring-category">Type</span></header><section><div><pre><code class="language-julia hljs">LabeledMatrix{V, A, K} &lt;: AbstractMatrix{LabeledValue{V, K}}</code></pre><p>Alias for <a href="#ReadStatTables.LabeledArray"><code>LabeledArray{V, 2, A, K}</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L230-L234">source</a></section></article><h2 id="Accessing-Values-and-Labels"><a class="docs-heading-anchor" href="#Accessing-Values-and-Labels">Accessing Values and Labels</a><a id="Accessing-Values-and-Labels-1"></a><a class="docs-heading-anchor-permalink" href="#Accessing-Values-and-Labels" title="Permalink"></a></h2><p>For <code>LabeledValue</code>, the underlying data value can be retrieved via <a href="#DataAPI.unwrap"><code>unwrap</code></a>. The value label can be obtained via <a href="#ReadStatTables.valuelabel"><code>valuelabel</code></a> or conversion to <code>String</code>. For <code>LabeledArray</code>, the underlying data values can be retrieved via <a href="#DataAPI.refarray"><code>refarray</code></a>. An iterator of value labels that maintains the shape of the <code>LabeledArray</code> can be obtained by calling <a href="#ReadStatTables.valuelabels"><code>valuelabels</code></a>.</p><article class="docstring"><header><a class="docstring-binding" id="DataAPI.unwrap" href="#DataAPI.unwrap"><code>DataAPI.unwrap</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">unwrap(x::LabeledValue)</code></pre><p>Return the value underlying the value label of <code>x</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L92-L96">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.valuelabel" href="#ReadStatTables.valuelabel"><code>ReadStatTables.valuelabel</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">valuelabel(x::LabeledValue)</code></pre><p>Return the value label associated with <code>x</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L99-L103">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.getvaluelabels" href="#ReadStatTables.getvaluelabels"><code>ReadStatTables.getvaluelabels</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">getvaluelabels(x::LabeledValue)</code></pre><p>Return the dictionary of value labels (typically assoicated with a data column) attached to <code>x</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L106-L111">source</a></section><section><div><pre><code class="nohighlight hljs">getvaluelabels(x::LabeledArray)
+getvaluelabels(x::SubArray{&lt;:Any, &lt;:Any, &lt;:LabeledArray})
+getvaluelabels(x::Base.ReshapedArray{&lt;:Any, &lt;:Any, &lt;:LabeledArray})
+getvaluelabels(x::SubArray{&lt;:Any, &lt;:Any, &lt;:Base.ReshapedArray{&lt;:Any, &lt;:Any, &lt;:LabeledArray}})</code></pre><p>Return the dictionary of value labels attached to <code>x</code>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L270-L277">source</a></section><section><div><pre><code class="nohighlight hljs">getvaluelabels(tb::ReadStatTable)
+getvaluelabels(tb::ReadStatTable, name::Symbol)</code></pre><p>Return a dictionary of all value label dictionaries contained in <code>tb</code> obtained from the data file. Return a specific dictionary of value labels if a <code>name</code> is specified.</p><p>Each dictionary of value labels is associated with a name that may appear in the variable-level metadata under the key <code>vallabel</code> for identifying the dictionary of value labels attached to each data column. The same dictionary may be associated with multiple data columns. Modifying the metadata value of <code>vallabel</code> for a data column switches the associated value labels for the data column. If the metadata value is set to <code>Symbol(&quot;&quot;)</code>, the data column is not associated with any value label.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/table.jl#L446-L462">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="DataAPI.refarray" href="#DataAPI.refarray"><code>DataAPI.refarray</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">refarry(x::LabeledArray)
+refarray(x::SubArray{&lt;:Any, &lt;:Any, &lt;:LabeledArray})
+refarray(x::Base.ReshapedArray{&lt;:Any, &lt;:Any, &lt;:LabeledArray})
+refarray(x::SubArray{&lt;:Any, &lt;:Any, &lt;:Base.ReshapedArray{&lt;:Any, &lt;:Any, &lt;:LabeledArray}})</code></pre><p>Return the array of values underlying a <a href="#ReadStatTables.LabeledArray"><code>LabeledArray</code></a>.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L254-L261">source</a></section></article><article class="docstring"><header><a class="docstring-binding" id="ReadStatTables.valuelabels" href="#ReadStatTables.valuelabels"><code>ReadStatTables.valuelabels</code></a> — <span class="docstring-category">Function</span></header><section><div><pre><code class="language-julia hljs">valuelabels(x::AbstractArray{&lt;:LabeledValue})</code></pre><p>Return an iterator over the value labels of all elements in <code>x</code>. The returned object is a subtype of <code>AbstractArray</code> with the same size of <code>x</code>.</p><p>The iterator can be used to collect value labels to arrays while discarding the underlying values.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; x = LabeledArray([1, 2, 3], Dict(1=&gt;&quot;a&quot;, 2=&gt;&quot;b&quot;))
+3-element LabeledVector{Int64, Vector{Int64}, Int64}:
+ 1 =&gt; a
+ 2 =&gt; b
+ 3 =&gt; 3
+
+julia&gt; lbls = valuelabels(x)
+3-element ReadStatTables.LabelIterator{LabeledVector{Int64, Vector{Int64}, Int64}, 1}:
+ &quot;a&quot;
+ &quot;b&quot;
+ &quot;3&quot;
+
+julia&gt; collect(lbls)
+3-element Vector{String}:
+ &quot;a&quot;
+ &quot;b&quot;
+ &quot;3&quot;
+
+julia&gt; CategoricalArray(lbls)
+3-element CategoricalArray{String,1,UInt32}:
+ &quot;a&quot;
+ &quot;b&quot;
+ &quot;3&quot;</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/junyuan-chen/ReadStatTables.jl/blob/60c8b4a07d61324f3e25c494cf98e947cd70ab2e/src/LabeledArrays.jl#L370-L405">source</a></section></article><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>The values themselves are sometimes meaningful and should not be treated as reference values.</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>In case a label is requested for a value that is not associated with a label, the value is converted to <code>String</code>.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../metadata/">« Metadata</a><a class="docs-footer-nextpage" href="../date-and-time-values/">Date and Time Values »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Monday 28 November 2022 05:27">Monday 28 November 2022</span>. Using Julia version 1.8.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
