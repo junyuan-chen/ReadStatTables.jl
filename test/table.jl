@@ -86,8 +86,8 @@ end
     @test size(tb) == (0, 1)
     @test length(tb) == 1
     @test isempty(tb)
-    @test valuelabels(tb) === vls
-    @test valuelabels(tb, :A) === lbls
+    @test getvaluelabels(tb) === vls
+    @test getvaluelabels(tb, :A) === lbls
     delete!(vls, :A)
     @test sprint(show, MIME("text/plain"), tb) == "0×1 ReadStatTable"
 
