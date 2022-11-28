@@ -22,7 +22,11 @@ export columnnames
 export LabeledValue,
        LabeledArray,
        LabeledVector,
-       labels,
+       LabeledMatrix,
+       valuelabel,
+       getvaluelabels,
+       convertvalue,
+       valuelabels,
 
        ReadStatColumns,
 
@@ -37,8 +41,7 @@ export LabeledValue,
        colmetavalues,
 
        readstat,
-       readstatmeta,
-       valuelabels
+       readstatmeta
 
 include("wrappers.jl")
 include("LabeledArrays.jl")

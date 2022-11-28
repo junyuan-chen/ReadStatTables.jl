@@ -130,11 +130,11 @@ end
 
     alltypes = "$(@__DIR__)/../data/alltypes.dta"
     dtype = readstat(alltypes)
-    @test eltype(dtype[1]) == LabeledValue{Union{Missing, Int8}}
-    @test eltype(dtype[2]) == LabeledValue{Union{Missing, Int16}}
-    @test eltype(dtype[3]) == LabeledValue{Union{Missing, Int32}}
-    @test eltype(dtype[4]) == LabeledValue{Union{Missing, Float32}}
-    @test eltype(dtype[5]) == LabeledValue{Union{Missing, Float64}}
+    @test eltype(dtype[1]) == LabeledValue{Union{Missing, Int8}, Union{Int32,Char}}
+    @test eltype(dtype[2]) == LabeledValue{Union{Missing, Int16}, Union{Int32,Char}}
+    @test eltype(dtype[3]) == LabeledValue{Union{Missing, Int32}, Union{Int32,Char}}
+    @test eltype(dtype[4]) == LabeledValue{Union{Missing, Float32}, Union{Int32,Char}}
+    @test eltype(dtype[5]) == LabeledValue{Union{Missing, Float64}, Union{Int32,Char}}
     @test eltype(dtype[6]) == String
     @test eltype(dtype[7]) == String
     @test length(dtype[1,7]) == 114

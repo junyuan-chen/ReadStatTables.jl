@@ -95,55 +95,55 @@ Variables with value labels are stored in [`LabeledArray`](@ref)s.
 To convert a `LabeledArray` to another array type,
 we may either obtain an array of [`LabeledValue`](@ref)s
 or collect the values and labels separately.
-If only the labels contain the relevant information,
-we can make use of the `labels` function which returns an iterator for the labels.
-For example, to convert a `LabeledArray` to a `CategoricalArray` from
-[CategoricalArrays.jl](https://github.com/JuliaData/CategoricalArrays.jl):
-
-```@repl getting-started
-using CategoricalArrays
-CategoricalArray(labels(tb.mylabl))
-```
-
-Sometimes, the values have special meanings while the labels are not so important.
-To access the array of values underlying a `LabeledArray` directly:
+The data values can be directly retrieved by calling [`refarray`](@ref):
 
 ```@repl getting-started
 refarray(tb.mylabl)
 ```
 
-Alternatively, convert a `LabeledArray` to an array with appropriate element type:
-
-```@repl getting-started
-convert(Vector{Int}, tb.mylabl)
-```
-
-In the last example, the element type of the output array has become `Int`
-while the labels are ignored.
-
 !!! note
 
-    The array returned by `refarray` (and by `convert` if element type is not converted)
+    The array returned by `refarray`
     is exactly the same array underlying the `LabeledArray`.
     Therefore, modifying the elements of the array
     will also mutate the values in the associated `LabeledArray`.
 
+If only the value labels are needed,
+we can obtain an iterator of the value labels via [`valuelabels`](@ref).
+For example, to convert a `LabeledArray` to a `CategoricalArray` from
+[CategoricalArrays.jl](https://github.com/JuliaData/CategoricalArrays.jl):
+
+```@repl getting-started
+using CategoricalArrays
+CategoricalArray(valuelabels(tb.mylabl))
+```
+
+It is also possible to only convert the type of the underlying data values:
+
+```@repl getting-started
+convertvalue(Int32, tb.mylabl)
+```
+
+```@docs
+convertvalue
+```
+
 ## More Options
 
-The behavior of `readstat` can be adjusted by passing keyword arguments.
+The behavior of `readstat` can be adjusted by passing keyword arguments:
 
 ```@docs
 readstat
 ```
 
-The accepted values for selecting certain variables (columns) are shown below:
+The accepted types of values for selecting certain variables (data columns) are shown below:
 
 ```@docs
 ReadStatTables.ColumnIndex
 ReadStatTables.ColumnSelector
 ```
 
-File-level metadata can be obtained without reading the entire data file.
+File-level metadata can be obtained without reading the entire data file:
 
 ```@docs
 readstatmeta

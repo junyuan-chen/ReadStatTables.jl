@@ -1,6 +1,6 @@
 # Table Interface
 
-This page provides further details on the interface of `ReadStatTable`.
+This page provides further details on the interface of [`ReadStatTable`](@ref).
 
 ```@docs
 ReadStatTable
@@ -59,7 +59,7 @@ end
 ## Data Values
 
 In addition to retrieving the data columns,
-it is possible to directly retrieving and modifying individual data values
+it is possible to directly retrieve and modify individual data values
 via `getindex` and `setindex!`.
 
 ```@repl table
