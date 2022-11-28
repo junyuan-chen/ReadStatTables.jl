@@ -94,6 +94,7 @@ end
     @test s isa LabeledArray
     @test s.labels === lbls
 
+    @test view(x, 1:3)[Int16(1)] === LabeledValue(1, lbls)
     v = view(x, 1:3)[1:2]
     @test v isa LabeledArray
     @test v.labels === lbls
@@ -196,7 +197,7 @@ end
     @test typeof(s) == typeof(x)
     s = similar(x, LabeledValue{Int16})
     @test eltype(s) == LabeledValue{Int16, keytype(lbls)}
-    s = similar(x, 3, 3)
+    s = similar(x, (3, 3))
     @test size(s) == (3, 3)
     s = similar(x, LabeledValue{Int16}, 3, 3)
     @test eltype(s) == LabeledValue{Int16, keytype(lbls)}

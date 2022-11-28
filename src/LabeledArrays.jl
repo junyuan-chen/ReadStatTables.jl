@@ -337,7 +337,7 @@ Base.convert(::Type{<:AbstractArray{<:LabeledValue{T},N}},
     convertvalue(T, x::LabeledArray)
 
 Convert the type of data values contained in `x` to `T`.
-This method is equivalent to `convert(AbstractArray{LabeledValue{T,K},N}}, x)`.
+This method is equivalent to `convert(AbstractArray{LabeledValue{T, K}, N}}, x)`.
 """
 convertvalue(::Type{T}, x::LabeledArray{V,N}) where {T,V,N} =
     LabeledArray(convert(AbstractArray{T,N}, refarray(x)), getvaluelabels(x))
