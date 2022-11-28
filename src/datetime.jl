@@ -66,7 +66,7 @@ const dt_formats = Dict{String, Dict}(
 Construct a vector of time values of type `DateTime` or `Date`
 by interpreting the elements in `col` as the number of periods passed
 since `epoch` with the length of each period being `delta`.
-Returned object is of a type acceptable by [`ReadStatColumns`](@ref).
+Returned object is of a type acceptable by `ReadStatColumns`.
 """
 function parse_datetime(col::AbstractVector, epoch::Union{DateTime,Date}, delta::Period,
         hasmissing::Bool)

@@ -21,11 +21,12 @@ Base.get(f::Base.Callable, m::AbstractMetaDict, key) =
 
 A collection of file-level metadata associated with a data file processed with `ReadStat`.
 
-Metadata can be retrieved and modified either through
-a dictionary-like interface or via methods compatible with `DataAPI.jl`.
+Metadata can be retrieved and modified from the associated [`ReadStatTable`](@ref)
+via methods compatible with `DataAPI.jl`.
+A dictionary-like interface is also available for directly working with `ReadStatMeta`.
 
 # Fields
-- `row_count::Int`: number of rows returned by `ReadStat` parser; being `-1` if not available in metadata; may reflect the value set with the `row_limit` parser option.
+- `row_count::Int`: number of rows returned by `ReadStat` parser; being `-1` if not available in metadata; may reflect the value set with the `row_limit` parser option instead of the actual number of rows in the data file.
 - `var_count::Int`: number of data columns returned by `ReadStat` parser.
 - `creation_time::DateTime`: timestamp for file creation.
 - `modified_time::DateTime`: timestamp for file modification.
@@ -86,15 +87,17 @@ end
 A collection of variable-level metadata associated with
 a data column processed with `ReadStat`.
 
-Metadata can be retrieved and modified via methods compatible with `DataAPI.jl`.
-A dictionary-like interface only allows retrieving the metadata.
+Metadata can be retrieved and modified from the associated [`ReadStatTable`](@ref)
+via methods compatible with `DataAPI.jl`.
+A dictionary-like interface is also available for directly working with `ReadStatColMeta`,
+but it does not allow modifying metadata values.
 An alternative way to retrive and modify the metadata is via [`colmetavalues`](@ref).
 
 # Fields
 - `label::String`: variable label.
 - `format::String`: variable format.
 - `type::readstat_type_t`: original variable type recognized by `ReadStat`.
-- `vallabel::Symbol`: name of the set of value labels associated with the variable.
+- `vallabel::Symbol`: name of the dictionary of value labels associated with the variable; see also [`getvaluelabels`](@ref) for the effect of modifying this field.
 - `storage_width::Csize_t`: variable storage width in data file.
 - `display_width::Cint`: width for display.
 - `measure::readstat_measure_t`: measure type of the variable; only relevant to SPSS.
@@ -155,14 +158,18 @@ const ColMetaVec = StructVector{ReadStatColMeta, NamedTuple{(:label, :format, :t
 """
     ReadStatTable <: Tables.AbstractColumns
 
-A `Tables.jl`-compatible column table that collects data (including metadata)
-for a Stata, SAS or SPSS file processed with `ReadStat`.
+A `Tables.jl`-compatible column table that efficiently collects data
+from a Stata, SAS or SPSS file processed with the `ReadStat` C library.
+File-level and variable-level metadata can be retrieved and modified
+via methods compatible with `DataAPI.jl`.
+
+See also [`ReadStatMeta`](@ref) and [`ReadStatColMeta`](@ref) for the included metadata.
 """
 struct ReadStatTable <: Tables.AbstractColumns
     columns::ReadStatColumns
     names::Vector{Symbol}
     lookup::Dict{Symbol, Int}
-    vallabels::Dict{Symbol, Dict{Any,String}}
+    vallabels::Dict{Symbol, Dict}
     hasmissing::Vector{Bool}
     meta::ReadStatMeta
     colmeta::ColMetaVec
@@ -171,7 +178,7 @@ struct ReadStatTable <: Tables.AbstractColumns
         columns = ReadStatColumns()
         names = Symbol[]
         lookup = Dict{Symbol, Int}()
-        vallabels = Dict{Symbol, Dict{Any,String}}()
+        vallabels = Dict{Symbol, Dict}()
         hasmissing = Vector{Bool}()
         meta = ReadStatMeta()
         colmeta = StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
@@ -180,7 +187,7 @@ struct ReadStatTable <: Tables.AbstractColumns
         return new(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
     end
     function ReadStatTable(columns::ReadStatColumns, names::Vector{Symbol},
-            vallabels::Dict{Symbol, Dict{Any,String}}, hasmissing::Vector{Bool},
+            vallabels::Dict{Symbol, Dict}, hasmissing::Vector{Bool},
             meta::ReadStatMeta, colmeta::ColMetaVec,
             styles::Dict{Symbol, Symbol}=Dict{Symbol, Symbol}())
         lookup = Dict{Symbol, Int}(n=>i for (i, n) in enumerate(names))
@@ -269,8 +276,8 @@ function _gettype(tb::ReadStatTable, i)
     T = eltype(Tables.getcolumn(tb, i))
     if T === Union{Int8, Missing}
         _hasmissing(tb)[i] || return Int8
-    elseif T === LabeledValue{Union{Missing, Int8}}
-        _hasmissing(tb)[i] || return LabeledValue{Int8}
+    elseif T <: LabeledValue && T.parameters[1] === Union{Int8, Missing}
+        _hasmissing(tb)[i] || return LabeledValue{Int8, T.parameters[2]}
     end
     return T
 end
@@ -436,5 +443,22 @@ Return an array of metadata values associated with `key` for all columns in `tb`
 """
 colmetavalues(tb::ReadStatTable, key) = _colmeta(tb, key)
 
-valuelabels(tb::ReadStatTable) = _vallabels(tb)
-valuelabels(tb::ReadStatTable, name::Symbol) = _vallabels(tb)[name]
+"""
+    getvaluelabels(tb::ReadStatTable)
+    getvaluelabels(tb::ReadStatTable, name::Symbol)
+
+Return a dictionary of all value label dictionaries contained in `tb`
+obtained from the data file.
+Return a specific dictionary of value labels if a `name` is specified.
+
+Each dictionary of value labels is associated with a name
+that may appear in the variable-level metadata under the key `vallabel`
+for identifying the dictionary of value labels attached to each data column.
+The same dictionary may be associated with multiple data columns.
+Modifying the metadata value of `vallabel` for a data column
+switches the associated value labels for the data column.
+If the metadata value is set to `Symbol("")`,
+the data column is not associated with any value label.
+"""
+getvaluelabels(tb::ReadStatTable) = _vallabels(tb)
+getvaluelabels(tb::ReadStatTable, name::Symbol) = _vallabels(tb)[name]

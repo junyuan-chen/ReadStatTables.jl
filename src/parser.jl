@@ -156,25 +156,23 @@ function handle_value!(obs_index::Cint, variable::Ptr{Cvoid}, value::readstat_va
     return READSTAT_HANDLER_OK
 end
 
-# Needed for getting value labels
-# String variables do not have value labels
-function getvalue(value::readstat_value_t)
-    type = value_type(value)
-    if Int(type) <= 3
-        return int32_value(value)
-    else
-        return double_value(value)
-    end
-end
-
 function handle_value_label!(val_labels::Cstring, value::readstat_value_t, label::Cstring,
         ctx::ParserContext)
     tb = ctx.tb
     lblname = Symbol(_string(val_labels))
-    lbls = get!(Dict{Any,String}, _vallabels(tb), lblname)
+    type = value_type(value)
+    # String variables do not have value labels
+    # All integers are Int32 and all floats are Float64 (ReadStat handles type conversion)
     # Tentatively save tagged missing values as Char
-    val = value_is_tagged_missing(value) ? value_tag(value) : getvalue(value)
-    lbls[val] = _string(label)
+    if Int(type) <= 3
+        lbls = get!(Dict{Union{Int32,Char},String}, _vallabels(tb), lblname)
+        val = value_is_tagged_missing(value) ? value_tag(value) : int32_value(value)
+        lbls[val] = _string(label)
+    else
+        lbls = get!(Dict{Union{Float64,Char},String}, _vallabels(tb), lblname)
+        val = value_is_tagged_missing(value) ? value_tag(value) : double_value(value)
+        lbls[val] = _string(label)
+    end
     return READSTAT_HANDLER_OK
 end
 

@@ -100,7 +100,7 @@ m["label"]
 copy(m)
 ```
 
-However, it can not be modified directly via `setindex!`:
+However, it cannot be modified directly via `setindex!`:
 
 ```@repl meta
 m["label"] = "A new label"

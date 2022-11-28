@@ -75,7 +75,7 @@ end
     m = gettestmeta()
     ms = StructVector(ReadStatColMeta[])
     lbls = Dict{Any,String}()
-    vls = Dict{Symbol, Dict{Any,String}}(:A=>lbls)
+    vls = Dict{Symbol, Dict}(:A=>lbls)
     hms = Bool[false]
     @test_throws ArgumentError ReadStatTable(ReadStatColumns(), Symbol[:c], vls, hms, m, ms)
     @test_throws ArgumentError ReadStatTable(ReadStatColumns(), Symbol[], vls, [true], m, ms)
@@ -86,8 +86,8 @@ end
     @test size(tb) == (0, 1)
     @test length(tb) == 1
     @test isempty(tb)
-    @test valuelabels(tb) === vls
-    @test valuelabels(tb, :A) === lbls
+    @test getvaluelabels(tb) === vls
+    @test getvaluelabels(tb, :A) === lbls
     delete!(vls, :A)
     @test sprint(show, MIME("text/plain"), tb) == "0×1 ReadStatTable"
 
@@ -184,7 +184,7 @@ end
     push!(cols, c1, c2)
     names = [:c1, :c2]
     hms = Bool[false, true]
-    vls = Dict{Symbol, Dict{Any,String}}()
+    vls = Dict{Symbol, Dict}()
     m = gettestmeta()
     ms = StructVector{ReadStatColMeta}((["v1","v2"], ["%tf","%tc"],
         [READSTAT_TYPE_INT8, READSTAT_TYPE_DOUBLE], [:A,Symbol()], [Csize_t(1),Csize_t(1)],

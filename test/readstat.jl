@@ -20,7 +20,7 @@ end
            5 │      e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
 
     m = metadata(d)
-    @test valuelabels(d, :mylabl) == d.mylabl.labels
+    @test getvaluelabels(d, :mylabl) == d.mylabl.labels
     @test minute(m.modified_time) == 36
     @test sprint(show, m) == "ReadStatMeta(A test file, .dta)"
     # Timestamp displays different values depending on time zone
@@ -74,7 +74,7 @@ end
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
     @test isempty(colmetadata(d))
-    @test length(valuelabels(d)) == 2
+    @test length(getvaluelabels(d)) == 2
 
     d = readstat(dta, usecols=1:3, row_offset=10)
     @test size(d) == (0, 3)
@@ -130,15 +130,15 @@ end
 
     alltypes = "$(@__DIR__)/../data/alltypes.dta"
     dtype = readstat(alltypes)
-    @test eltype(dtype[1]) == LabeledValue{Union{Missing, Int8}}
-    @test eltype(dtype[2]) == LabeledValue{Union{Missing, Int16}}
-    @test eltype(dtype[3]) == LabeledValue{Union{Missing, Int32}}
-    @test eltype(dtype[4]) == LabeledValue{Union{Missing, Float32}}
-    @test eltype(dtype[5]) == LabeledValue{Union{Missing, Float64}}
+    @test eltype(dtype[1]) == LabeledValue{Union{Missing, Int8}, Union{Int32,Char}}
+    @test eltype(dtype[2]) == LabeledValue{Union{Missing, Int16}, Union{Int32,Char}}
+    @test eltype(dtype[3]) == LabeledValue{Union{Missing, Int32}, Union{Int32,Char}}
+    @test eltype(dtype[4]) == LabeledValue{Union{Missing, Float32}, Union{Int32,Char}}
+    @test eltype(dtype[5]) == LabeledValue{Union{Missing, Float64}, Union{Int32,Char}}
     @test eltype(dtype[6]) == String
     @test eltype(dtype[7]) == String
     @test length(dtype[1,7]) == 114
-    vallbls = valuelabels(dtype)
+    vallbls = getvaluelabels(dtype)
     @test length(vallbls) == 1
     lbls = vallbls[:testlbl]
     @test length(lbls) == 2
