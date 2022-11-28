@@ -95,6 +95,7 @@ end
     @test s.labels === lbls
 
     @test view(x, 1:3)[Int16(1)] === LabeledValue(1, lbls)
+    @test reshape(x, 2, 3)[Int16(1)] === LabeledValue(1, lbls)
     v = view(x, 1:3)[1:2]
     @test v isa LabeledArray
     @test v.labels === lbls
@@ -105,6 +106,8 @@ end
     @test v isa LabeledArray
     @test v.labels === lbls
 
+    @test view(x2, 1:2, 1:2)[Int16(1)] === LabeledValue(1, lbls)
+    @test reshape(x2, 2, 3)[Int16(1)] === LabeledValue(1, lbls)
     v = view(x2, 1:2, 1:2)[1,1]
     @test v isa LabeledValue
     @test v.labels === lbls
