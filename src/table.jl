@@ -160,7 +160,7 @@ const ColMetaVec = StructVector{ReadStatColMeta, NamedTuple{(:label, :format, :t
 
 A `Tables.jl`-compatible column table that efficiently collects data
 from a Stata, SAS or SPSS file processed with the `ReadStat` C library.
-File-level and column-level metadata can be retrieved and modified
+File-level and variable-level metadata can be retrieved and modified
 via methods compatible with `DataAPI.jl`.
 
 See also [`ReadStatMeta`](@ref) and [`ReadStatColMeta`](@ref) for the included metadata.
@@ -452,7 +452,7 @@ obtained from the data file.
 Return a specific dictionary of value labels if a `name` is specified.
 
 Each dictionary of value labels is associated with a name
-that may appear in the column-level metadata under the key `vallabel`
+that may appear in the variable-level metadata under the key `vallabel`
 for identifying the dictionary of value labels attached to each data column.
 The same dictionary may be associated with multiple data columns.
 Modifying the metadata value of `vallabel` for a data column
