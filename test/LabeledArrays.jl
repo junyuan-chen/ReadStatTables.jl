@@ -174,29 +174,6 @@ end
     @test x == vals
     @test vals == x
 
-    x1 = copy(x)
-    @test x1 == x
-    @test refarray(x1) !== refarray(x)
-    @test typeof(x1) == typeof(x)
-    @test x1.labels === x.labels
-
-    dest = similar(refarray(x1))
-    copyto!(dest, x1)
-    @test isequal(dest, refarray(x1))
-    dest = similar(refarray(x1))
-    copyto!(IndexLinear(), dest, IndexLinear(), x1)
-    @test isequal(dest, refarray(x1))
-    dest = similar(refarray(x1))
-    copyto!(dest, 2, view(x1, 1:3))
-    @test isequal(dest[2:4], view(refarray(x1), 1:3))
-    copyto!(dest, 2:4, 1:1, x1, 1:3, 1:1)
-    @test isequal(dest[2:4], view(refarray(x1), 1:3))
-
-    x2 = collect(x)
-    @test x2 == x
-    @test x2 isa Array
-    @test eltype(x2) == eltype(x)
-
     x2 = convert(AbstractVector{LabeledValue{Int16,Union{Int,Missing}}}, x)
     @test typeof(x2) == LabeledVector{Int16, Vector{Int16}, Union{Int,Missing}}
     @test x2.values == x.values
@@ -232,6 +209,39 @@ end
     @test size(s) == (3, 3)
     copyto!(s, 1:3, 1:1, x, 1:3, 1:1)
     @test s[1:3] == x[1:3]
+
+    x1 = copy(x)
+    @test x1 == x
+    @test refarray(x1) !== refarray(x)
+    @test typeof(x1) == typeof(x)
+    @test x1.labels === x.labels
+
+    dest = similar(refarray(x1))
+    copyto!(dest, x1)
+    @test isequal(dest, refarray(x1))
+    dest = similar(refarray(x1))
+    copyto!(IndexLinear(), dest, IndexLinear(), x1)
+    @test isequal(dest, refarray(x1))
+    dest = similar(refarray(x1))
+    copyto!(dest, 2, view(x1, 1:3))
+    @test isequal(dest[2:4], view(refarray(x1), 1:3))
+    copyto!(dest, 2:4, 1:1, x1, 1:3, 1:1)
+    @test isequal(dest[2:4], view(refarray(x1), 1:3))
+
+    x2 = collect(x)
+    @test x2 == x
+    @test x2 isa LabeledArray
+    @test eltype(x2) == eltype(x)
+
+    x2 = collect(view(x, 1:3))
+    @test x2 == view(x, 1:3)
+    @test x2 isa LabeledArray
+    @test eltype(x2) == eltype(x)
+
+    x2 = collect(LabeledValue{Int16, Int}, view(x, 1:3))
+    @test x2 == view(x, 1:3)
+    @test x2 isa LabeledArray
+    @test eltype(x2) == LabeledValue{Int16, keytype(lbls)}
 
     lbs = valuelabels(x)
     @test size(lbs) == size(x)
