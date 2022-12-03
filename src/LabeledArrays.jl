@@ -328,6 +328,24 @@ Base.:(==)(x::AbstractArray, y::LabeledArray) = x == refarray(y)
 # Value labels are not copied and may still be shared with other LabeledArrays
 Base.copy(x::LabeledArray) = LabeledArray(copy(refarray(x)), getvaluelabels(x))
 
+Base.copyto!(dest::AbstractArray, src::LabeledArrOrSubOrReshape) =
+    copyto!(dest, refarray(src))
+
+Base.copyto!(deststyle::IndexStyle, dest::AbstractArray, srcstyle::IndexStyle,
+    src::LabeledArrOrSubOrReshape) =
+        copyto!(deststyle, dest, srcstyle, refarray(src))
+
+Base.copyto!(dest::AbstractArray, dstart::Integer, src::LabeledArrOrSubOrReshape,
+    sstart::Integer, n::Integer) =
+        copyto!(dest, dstart, refarray(src), sstart, n)
+
+Base.copyto!(B::AbstractVecOrMat, ir_dest::AbstractRange{Int},
+    jr_dest::AbstractRange{Int}, A::LabeledArrOrSubOrReshape,
+    ir_src::AbstractRange{Int}, jr_src::AbstractRange{Int}) =
+        copyto!(B, ir_dest, jr_dest, refarray(A), ir_src, jr_src)
+
+Base.collect(x::LabeledArrOrSubOrReshape) = map(i->@inbounds(getindex(x, i)), eachindex(x))
+
 # Only convert the value type
 Base.convert(::Type{<:AbstractArray{<:LabeledValue{T},N}},
     x::LabeledArray{V,N}) where {T,V,N} =
@@ -346,14 +364,13 @@ convertvalue(::Type{T}, x::LabeledArray{V,N}) where {T,V,N} =
 Base.similar(x::LabeledArrOrSubOrReshape) =
     LabeledArray(similar(refarray(x)), getvaluelabels(x))
 
-Base.similar(x::LabeledArrOrSubOrReshape, ::Type{<:LabeledValue{V}}) where V =
-    LabeledArray(similar(refarray(x), V), getvaluelabels(x))
-
-Base.similar(x::LabeledArrOrSubOrReshape, dims::Dims) =
-    LabeledArray(similar(refarray(x), dims), getvaluelabels(x))
-
 Base.similar(x::LabeledArrOrSubOrReshape, ::Type{<:LabeledValue{V}}, dims::Dims) where V =
     LabeledArray(similar(refarray(x), V, dims), getvaluelabels(x))
+
+# Needed for similar_missing in DataFrames.jl to work
+Base.similar(x::LabeledArrOrSubOrReshape,
+    ::Type{Union{LabeledValue{V, K}, Missing}}, dims::Dims) where {V,K} =
+        LabeledArray(similar(refarray(x), Union{V, Missing}, dims), getvaluelabels(x))
 
 # Assume VERSION >= v"1.3.0"
 # Define abbreviated element type name for printing with PrettyTables.jl

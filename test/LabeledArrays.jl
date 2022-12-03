@@ -134,10 +134,6 @@ end
     @test refarray(view(x, [1, 3])) == 1:2
     @test refarray(reshape(x, 3, 2)) == reshape(x.values, 3, 2)
     @test refarray(view(x2, 1:3)) == x2.values[1:3]
-    x3 = collect(x)
-    @test x3 == x
-    @test x3 isa Array
-    @test eltype(x3) == eltype(x)
 
     x3 = LabeledArray(copy(vals1), lbls)
     fill!(x3, 1)
@@ -184,6 +180,23 @@ end
     @test typeof(x1) == typeof(x)
     @test x1.labels === x.labels
 
+    dest = similar(refarray(x1))
+    copyto!(dest, x1)
+    @test isequal(dest, refarray(x1))
+    dest = similar(refarray(x1))
+    copyto!(IndexLinear(), dest, IndexLinear(), x1)
+    @test isequal(dest, refarray(x1))
+    dest = similar(refarray(x1))
+    copyto!(dest, 2, view(x1, 1:3))
+    @test isequal(dest[2:4], view(refarray(x1), 1:3))
+    copyto!(dest, 2:4, 1:1, x1, 1:3, 1:1)
+    @test isequal(dest[2:4], view(refarray(x1), 1:3))
+
+    x2 = collect(x)
+    @test x2 == x
+    @test x2 isa Array
+    @test eltype(x2) == eltype(x)
+
     x2 = convert(AbstractVector{LabeledValue{Int16,Union{Int,Missing}}}, x)
     @test typeof(x2) == LabeledVector{Int16, Vector{Int16}, Union{Int,Missing}}
     @test x2.values == x.values
@@ -199,12 +212,26 @@ end
     s = similar(x)
     @test typeof(s) == typeof(x)
     s = similar(x, LabeledValue{Int16})
+    @test s isa LabeledArray
     @test eltype(s) == LabeledValue{Int16, keytype(lbls)}
+    copyto!(s, x)
+    @test s == x
     s = similar(x, (3, 3))
+    @test s isa LabeledArray
     @test size(s) == (3, 3)
-    s = similar(x, LabeledValue{Int16}, 3, 3)
+    s = similar(x, LabeledValue{Int16}, (3, 3))
+    @test s isa LabeledArray
     @test eltype(s) == LabeledValue{Int16, keytype(lbls)}
     @test size(s) == (3, 3)
+    s = similar(x, Union{LabeledValue{Int16, keytype(lbls)}, Missing})
+    @test s isa LabeledArray
+    @test eltype(s) == LabeledValue{Union{Missing, Int16}, Union{Missing, Int64}}
+    s = similar(x, Union{LabeledValue{Int16, keytype(lbls)}, Missing}, (3, 3))
+    @test s isa LabeledArray
+    @test eltype(s) == LabeledValue{Union{Missing, Int16}, Union{Missing, Int64}}
+    @test size(s) == (3, 3)
+    copyto!(s, 1:3, 1:1, x, 1:3, 1:1)
+    @test s[1:3] == x[1:3]
 
     lbs = valuelabels(x)
     @test size(lbs) == size(x)
