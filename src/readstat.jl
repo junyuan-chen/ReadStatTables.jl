@@ -22,16 +22,20 @@ from a supported data file located at `filepath`.
 # Keywords
 - `usecols::Union{ColumnSelector, Nothing} = nothing`: only collect data from the specified columns (variables); collect all columns if `usecols=nothing`.
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
-- `row_offset::Union{Integer, Nothing} = nothing`: specify the offset for the first row to be read; start from the first row (`row_offset=0`) if `row_offset=nothing`.
+- `row_offset::Integer = 0`: skip the specified number of rows.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
+- `useinlinestring::Bool = true`: use a fixed-width string type that can be stored inline for any string variable with width below 32.
+- `pool_thres::Integer = 1000`: use `PooledArray` for any string variable that does not have a fixed-width string type if the number of unique values does not exceed `pool_thres`; a non-positive value avoids using `PooledArray`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
 function readstat(filepath;
         usecols::Union{ColumnSelector, Nothing} = nothing,
         row_limit::Union{Integer, Nothing} = nothing,
-        row_offset::Union{Integer, Nothing} = nothing,
+        row_offset::Integer = 0,
         convert_datetime::Bool = true,
+        useinlinestring::Bool = true,
+        pool_thres::Integer = 1000,
         file_encoding::Union{String, Nothing} = nothing,
         handler_encoding::Union{String, Nothing} = nothing)
 
@@ -43,7 +47,7 @@ function readstat(filepath;
             idx isa Integer ? Int(idx) : Symbol(idx) for idx in usecols)
     end
     ctx = _parse_all(filepath, usecols, row_limit, row_offset,
-        file_encoding, handler_encoding)
+        useinlinestring, pool_thres, file_encoding, handler_encoding)
     tb = ctx.tb
     cols = _columns(tb)
     m = _meta(tb)

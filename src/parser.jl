@@ -5,6 +5,8 @@ jltype(type::readstat_type_t) = jltypes[convert(Int, type)+1]
 mutable struct ParserContext
     tb::ReadStatTable
     usecols::Union{UnitRange, Set, Nothing}
+    useinlinestring::Bool
+    pool_thres::Int
 end
 
 parse_dta(parser::Ptr{Cvoid}, path::AbstractString, user_ctx::Ref{ParserContext}) =
@@ -113,7 +115,8 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     type = variable_get_type(variable)
     push!(colmetas.type, type)
     push!(colmetas.vallabel, Symbol(_string(val_labels)))
-    push!(colmetas.storage_width, variable_get_storage_width(variable))
+    width = variable_get_storage_width(variable)
+    push!(colmetas.storage_width, width)
     push!(colmetas.display_width, variable_get_display_width(variable))
     push!(colmetas.measure, variable_get_measure(variable))
     push!(colmetas.alignment, variable_get_alignment(variable))
@@ -121,9 +124,34 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     # Row count is not always available from metadata
     N = max(m.row_count, 0)
     cols = _columns(tb)
+    usepool = ctx.pool_thres > 0
     T = jltype(type)
     if T === String
-        push!(cols, fill("", N))
+        if ctx.useinlinestring
+            # No "" for String1
+            # StrL in Stata has width being 0
+            if width == 0 || width > 32
+                if usepool
+                    push!(cols, PooledArray(fill("", N), UInt16))
+                else
+                    push!(cols, fill("", N))
+                end
+            elseif width < 5
+                push!(cols, fill(String3(), N))
+            elseif width < 9
+                push!(cols, fill(String7(), N))
+            elseif width < 17
+                push!(cols, fill(String15(), N))
+            elseif width < 33
+                push!(cols, fill(String31(), N))
+            end
+        else
+            if usepool
+                push!(cols, PooledArray(fill("", N), UInt16))
+            else
+                push!(cols, fill("", N))
+            end
+        end
     elseif T === Int8
         push!(cols, Vector{Union{T, Missing}}(missing, N))
     elseif T <: Union{Int16, Int32}
@@ -151,7 +179,7 @@ function handle_value!(obs_index::Cint, variable::Ptr{Cvoid}, value::readstat_va
         # Todo: Handle the case with tagged missing
     else
         irow = obs_index + 1
-        @inbounds _setvalue!(cols, value, irow, icol)
+        @inbounds _setvalue!(cols, value, irow, icol, ctx.pool_thres)
     end
     return READSTAT_HANDLER_OK
 end
@@ -178,15 +206,15 @@ end
 
 _error(e::readstat_error_t) = e === READSTAT_OK ? nothing : error(error_message(e))
 
-function _parse_all(filepath, usecols, row_limit, row_offset, file_encoding,
-        handler_encoding)
+function _parse_all(filepath, usecols, row_limit, row_offset,
+        useinlinestring, pool_thres, file_encoding, handler_encoding)
     ext = lowercase(splitext(filepath)[2])
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     tb = ReadStatTable()
     m = _meta(tb)
     m.file_ext = ext
-    ctx = ParserContext(tb, usecols)
+    ctx = ParserContext(tb, usecols, useinlinestring, pool_thres)
     refctx = Ref{ParserContext}(ctx)
     parser = parser_init()
     set_metadata_handler(parser, @cfunction(handle_metadata!,

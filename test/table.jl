@@ -150,26 +150,27 @@ end
     columns = gettestcolumns(10)
     cols = ReadStatColumns()
     push!(cols, columns...)
-    names = [Symbol("n",i) for i in 1:8]
-    hms = fill(false, 8)
-    ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:8], fill("%tf", 8),
-        fill(READSTAT_TYPE_DOUBLE, 8), fill(Symbol(), 8), fill(Csize_t(1), 8),
-        fill(Cint(1), 8), fill(READSTAT_MEASURE_UNKNOWN, 8),
-        fill(READSTAT_ALIGNMENT_UNKNOWN, 8)))
+    N = 13
+    names = [Symbol("n",i) for i in 1:N]
+    hms = fill(false, N)
+    ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:N], fill("%tf", N),
+        fill(READSTAT_TYPE_DOUBLE, N), fill(Symbol(), N), fill(Csize_t(1), N),
+        fill(Cint(1), N), fill(READSTAT_MEASURE_UNKNOWN, N),
+        fill(READSTAT_ALIGNMENT_UNKNOWN, N)))
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
-    for i in 1:8
-        if i != 1
+    for i in 1:N
+        if 1 < i < 9
             @test ismissing(tb[i,i])
         end
-        if i < 3
+        if i < 3 || i > 8
             @test tb[i] === columns[i]
         else
             @test tb[i] === parent(columns[i])
         end
     end
-    hms = fill(true, 8)
+    hms = fill(true, N)
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
-    for i in 1:8
+    for i in 1:N
         @test tb[i] === columns[i]
     end
 end

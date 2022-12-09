@@ -85,7 +85,7 @@ end
     READSTAT_ERROR_BAD_TIMESTAMP_VALUE
 end
 
-_string(str::Cstring) = str == C_NULL ? "" : unsafe_string(str)
+_string(str::Union{Cstring, Ptr{UInt8}}) = str == C_NULL ? "" : unsafe_string(str)
 
 error_message(error_code::readstat_error_t) =
     _string(ccall((:readstat_error_message, libreadstat),
@@ -184,8 +184,7 @@ double_value(value::readstat_value_t) =
     ccall((:readstat_double_value, libreadstat), Float64, (readstat_value_t,), value)
 
 string_value(value::readstat_value_t) =
-    _string(ccall((:readstat_string_value, libreadstat),
-        Cstring, (readstat_value_t,), value))
+    ccall((:readstat_string_value, libreadstat), Ptr{UInt8}, (readstat_value_t,), value)
 
 #=
 variable_get_index(variable::Ptr{Cvoid}) =

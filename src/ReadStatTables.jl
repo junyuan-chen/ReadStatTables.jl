@@ -3,6 +3,8 @@ module ReadStatTables
 using CEnum: @cenum
 using Dates
 using Dates: unix2datetime
+using InlineStrings
+using PooledArrays
 using PrettyTables: pretty_table
 using ReadStat_jll
 using SentinelArrays: SentinelVector
