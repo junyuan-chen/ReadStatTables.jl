@@ -2,7 +2,7 @@ const jltypes = (String, Int8, Int16, Int32, Float32, Float64, String)
 
 jltype(type::readstat_type_t) = jltypes[convert(Int, type)+1]
 
-struct ParserContext
+mutable struct ParserContext
     tb::ReadStatTable
     usecols::Union{UnitRange, Set, Nothing}
     useinlinestring::Bool

@@ -25,7 +25,7 @@ from a supported data file located at `filepath`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
 - `useinlinestring::Bool = true`: use a fixed-width string type that can be stored inline for any string variable with width below 32.
-- `pool_thres::Integer = 1000`: use `PooledArray` for any string variable that does not have a fixed-width string type if the number of unique values does not exceed `pool_thres`; a non-positive value avoids using `PooledArray`.
+- `pool_thres::Integer = 500`: use `PooledArray` for any string variable that does not have a fixed-width string type if the number of unique values does not exceed `pool_thres`; a non-positive value avoids using `PooledArray`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
@@ -35,7 +35,7 @@ function readstat(filepath;
         row_offset::Integer = 0,
         convert_datetime::Bool = true,
         useinlinestring::Bool = true,
-        pool_thres::Integer = 1000,
+        pool_thres::Integer = 500,
         file_encoding::Union{String, Nothing} = nothing,
         handler_encoding::Union{String, Nothing} = nothing)
 
