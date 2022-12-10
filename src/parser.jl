@@ -128,16 +128,16 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     usepool = pool_thres > 0
     T = jltype(type)
     if T === String
-        if ctx.useinlinestring
-            # No "" for String1
-            # StrL in Stata has width being 0
-            if width == 0 || width > 32
-                if usepool
-                    push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
-                else
-                    push!(cols, fill("", N))
-                end
-            elseif width < 5
+        # No "" for String1
+        # StrL in Stata has width being 0
+        if width == 0 || width > 32
+            if usepool
+                push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
+            else
+                push!(cols, fill("", N))
+            end
+        elseif ctx.useinlinestring
+            if width < 5
                 push!(cols, fill(String3(), N))
             elseif width < 9
                 push!(cols, fill(String7(), N))
@@ -147,11 +147,8 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
                 push!(cols, fill(String31(), N))
             end
         else
-            if usepool
-                push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
-            else
-                push!(cols, fill("", N))
-            end
+            # Do not use PooledArray for short strings
+            push!(cols, fill("", N))
         end
     elseif T === Int8
         push!(cols, Vector{Union{T, Missing}}(missing, N))
