@@ -7,7 +7,7 @@ function gettestcolumns(N::Int)
     doublecol = SentinelVector{Float64}(undef, N)
     datecol = SentinelVector{Date}(undef, N)
     timecol = SentinelVector{DateTime}(undef, N)
-    pooledcol = PooledArray(fill("", N), UInt16)
+    pooledcol = (PooledArray(fill("", N), UInt16), 1000)
     str3col = fill(String3(), N)
     str7col = fill(String7(), N)
     str15col = fill(String15(), N)
@@ -29,7 +29,11 @@ end
     @test length(cols) == 13
     @test cols.index == [(n, 1) for n in 2:14]
     for (i, col) in enumerate(columns)
-        @test cols[i] === col
+        if i == 9
+            @test cols[i] === col[1]
+        else
+            @test cols[i] === col
+        end
     end
     @test sprint(show, cols) == "10×13 ReadStatColumns"
 

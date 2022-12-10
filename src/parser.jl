@@ -2,7 +2,7 @@ const jltypes = (String, Int8, Int16, Int32, Float32, Float64, String)
 
 jltype(type::readstat_type_t) = jltypes[convert(Int, type)+1]
 
-mutable struct ParserContext
+struct ParserContext
     tb::ReadStatTable
     usecols::Union{UnitRange, Set, Nothing}
     useinlinestring::Bool
@@ -124,7 +124,8 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     # Row count is not always available from metadata
     N = max(m.row_count, 0)
     cols = _columns(tb)
-    usepool = ctx.pool_thres > 0
+    pool_thres = ctx.pool_thres
+    usepool = pool_thres > 0
     T = jltype(type)
     if T === String
         if ctx.useinlinestring
@@ -132,7 +133,7 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
             # StrL in Stata has width being 0
             if width == 0 || width > 32
                 if usepool
-                    push!(cols, PooledArray(fill("", N), UInt16))
+                    push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
                 else
                     push!(cols, fill("", N))
                 end
@@ -147,7 +148,7 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
             end
         else
             if usepool
-                push!(cols, PooledArray(fill("", N), UInt16))
+                push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
             else
                 push!(cols, fill("", N))
             end
@@ -179,7 +180,7 @@ function handle_value!(obs_index::Cint, variable::Ptr{Cvoid}, value::readstat_va
         # Todo: Handle the case with tagged missing
     else
         irow = obs_index + 1
-        @inbounds _setvalue!(cols, value, irow, icol, ctx.pool_thres)
+        @inbounds _setvalue!(cols, value, irow, icol)
     end
     return READSTAT_HANDLER_OK
 end

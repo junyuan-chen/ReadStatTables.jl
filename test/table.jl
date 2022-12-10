@@ -162,8 +162,10 @@ end
         if 1 < i < 9
             @test ismissing(tb[i,i])
         end
-        if i < 3 || i > 8
+        if i < 3 || i > 9
             @test tb[i] === columns[i]
+        elseif i == 9
+            @test tb[i] === columns[i][1]
         else
             @test tb[i] === parent(columns[i])
         end
@@ -171,7 +173,11 @@ end
     hms = fill(true, N)
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:N
-        @test tb[i] === columns[i]
+        if i == 9
+            @test tb[i] === columns[i][1]
+        else
+            @test tb[i] === columns[i]
+        end
     end
 end
 

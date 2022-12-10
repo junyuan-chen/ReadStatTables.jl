@@ -243,7 +243,7 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable, i::Int)
     elseif m === 9
         return _hasmissing(tb)[i] ? getfield(cols, 9)[n] : parent(getfield(cols, 9)[n])
     elseif m === 10
-        return getfield(cols, 10)[n]
+        return getfield(cols, 10)[n][1]
     elseif m === 11
         return getfield(cols, 11)[n]
     elseif m === 12

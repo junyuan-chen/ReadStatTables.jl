@@ -8,7 +8,7 @@ const FloatColumn = SentinelVector{Float32, Float32, Missing, Vector{Float32}}
 const DoubleColumn = SentinelVector{Float64, Float64, Missing, Vector{Float64}}
 const DateColumn = SentinelVector{Date, Date, Missing, Vector{Date}}
 const TimeColumn = SentinelVector{DateTime, DateTime, Missing, Vector{DateTime}}
-const PooledColumn = PooledVector{String, UInt16, Vector{UInt16}}
+const PooledColumn = Tuple{PooledVector{String, UInt16, Vector{UInt16}}, Int}
 for sz in (3, 7, 15, 31)
     colname = Symbol(:Str, sz, :Column)
     strtype = Symbol(:String, sz)
@@ -68,7 +68,7 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, i::Int)
     elseif m === 9
         return getfield(cols, 9)[n]
     elseif m === 10
-        return getfield(cols, 10)[n]
+        return getfield(cols, 10)[n][1]
     elseif m === 11
         return getfield(cols, 11)[n]
     elseif m === 12
@@ -99,7 +99,7 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, r, c::Int
     elseif m === 9
         return getindex(getfield(cols, 9)[n], r)
     elseif m === 10
-        return getindex(getfield(cols, 10)[n], r)
+        return getindex(getfield(cols, 10)[n][1], r)
     elseif m === 11
         return getindex(getfield(cols, 11)[n], r)
     elseif m === 12
@@ -130,7 +130,7 @@ Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::In
     elseif m === 9
         return setindex!(getfield(cols, 9)[n], v, r)
     elseif m === 10
-        return setindex!(getfield(cols, 10)[n], v, r)
+        return setindex!(getfield(cols, 10)[n][1], v, r)
     elseif m === 11
         return setindex!(getfield(cols, 11)[n], v, r)
     elseif m === 12
@@ -149,7 +149,7 @@ for sz in (3, 7, 15, 31)
 end
 
 Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
-        value::readstat_value_t, r::Int, c::Int, pool_thres)
+        value::readstat_value_t, r::Int, c::Int)
     m, n = getfield(cols, 1)[c]
     if m === 2
         v = _string(string_value(value))
@@ -176,25 +176,20 @@ Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
         col = getfield(cols, 7)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 10
-        col = getfield(cols, 10)[n]
+        col, pool_thres = getfield(cols, 10)[n]
         if length(col.pool) < pool_thres
             v = _string(string_value(value))
             r <= length(col) ? setindex!(col, v, r) : push!(col, v)
         else
             N = length(col)
-            strcol = Vector{String}(undef, N)
+            strcol = fill("", N)
             copyto!(strcol, 1, col, 1, r-1)
             strcols = getfield(cols, 2)
             push!(strcols, strcol)
             getfield(cols, 1)[c] = (2, length(strcols))
             empty!(col)
             v = _string(string_value(value))
-            if r <= N
-                r < N && fill!(view(strcol, r+1:N), "")
-                setindex!(strcol, v, r)
-            else
-                push!(strcol, v)
-            end
+            r <= N ? setindex!(strcol, v, r) : push!(strcol, v)
         end
     elseif m === 11
         v = _str3(string_value(value))
@@ -231,7 +226,7 @@ end
     elseif m === 7
         push!(getfield(cols, 7)[n], missing)
     elseif m === 10
-        push!(getfield(cols, 10)[n], "")
+        push!(getfield(cols, 10)[n][1], "")
     elseif m === 11
         push!(getfield(cols, 11)[n], String3())
     elseif m === 12
