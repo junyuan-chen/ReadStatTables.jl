@@ -160,6 +160,7 @@ end
 
     strtype = readstat(stringtypes, useinlinestring=false)
     @test all(x->eltype(x)==String, strtype)
+    @test strtype.vstr31 isa Array
     strtype = readstat(stringtypes, pool_thres=1)
     @test strtype.vstr32 isa Array
     strtype = readstat(stringtypes, pool_thres=0)

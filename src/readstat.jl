@@ -24,8 +24,8 @@ from a supported data file located at `filepath`.
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
-- `useinlinestring::Bool = true`: use a fixed-width string type that can be stored inline for any string variable with width below 32.
-- `pool_thres::Integer = 500`: use `PooledArray` for any string variable that does not have a fixed-width string type if the number of unique values does not exceed `pool_thres`; a non-positive value avoids using `PooledArray`.
+- `useinlinestring::Bool = true`: use a fixed-width string type that can be stored inline for any string variable with width not exceeding 32.
+- `pool_thres::Integer = 500`: use `PooledArray` for any string variable with width above 32 if the number of unique values does not exceed `pool_thres`; a non-positive value avoids using `PooledArray`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
