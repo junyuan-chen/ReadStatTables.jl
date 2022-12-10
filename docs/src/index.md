@@ -12,6 +12,15 @@ The same C library is also the backend of popular packages in other languages su
 [pyreadstat](https://github.com/Roche/pyreadstat) for Python
 and [haven](https://github.com/tidyverse/haven) for R.
 ReadStatTables.jl can be viewed as the Julia counterpart for similar purposes.
+Its read performance dominates all related packages
+based on benchmark results
+[here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks).
+
+```@raw html
+<p align="center">
+  <img src="https://raw.githubusercontent.com/junyuan-chen/ReadStatTablesBenchmarks/main/results/stable/stata_10k_500.svg" width="70%"><br>
+</p>
+```
 
 ## Features
 

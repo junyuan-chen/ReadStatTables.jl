@@ -3,6 +3,8 @@ module ReadStatTables
 using CEnum: @cenum
 using Dates
 using Dates: unix2datetime
+using InlineStrings
+using PooledArrays
 using PrettyTables: pretty_table
 using ReadStat_jll
 using SentinelArrays: SentinelVector
@@ -17,6 +19,7 @@ import Tables: columnnames
 export refarray, unwrap, nrow, ncol, metadata, metadatakeys, metadata!,
     colmetadata, colmetadatakeys, colmetadata!
 export Date, DateTime # Needed for avoiding the "Dates." qualifier when printing tables
+export String3, String7, String15, String31
 export columnnames
 
 export LabeledValue,
