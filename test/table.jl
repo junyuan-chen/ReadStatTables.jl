@@ -150,7 +150,7 @@ end
     columns = gettestcolumns(10)
     cols = ReadStatColumns()
     push!(cols, columns...)
-    N = 13
+    N = 16
     names = [Symbol("n",i) for i in 1:N]
     hms = fill(false, N)
     ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:N], fill("%tf", N),

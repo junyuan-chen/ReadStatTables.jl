@@ -20,21 +20,25 @@ from a supported data file located at `filepath`.
 - SPSS: `.sav` and `por`.
 
 # Keywords
+- `ext = lowercase(splitext(filepath)[2])`: extension of data file for choosing the parser.
 - `usecols::Union{ColumnSelector, Nothing} = nothing`: only collect data from the specified columns (variables); collect all columns if `usecols=nothing`.
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
-- `useinlinestring::Bool = true`: use a fixed-width string type that can be stored inline for any string variable with width not exceeding 32.
-- `pool_thres::Integer = 500`: use `PooledArray` for any string variable with width above 32 if the number of unique values does not exceed `pool_thres`; a non-positive value avoids using `PooledArray`.
+- `inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32`: use a fixed-width string type that can be stored inline for any string variable with width below `inlinestring_width` and `pool_width`; a non-positive value avoids using any inline string type; not recommended for SPSS files.
+- `pool_width::Integer = 64`: only attempt to use `PooledArray` for string variables with width of at least 64.
+- `pool_thres::Integer = 500`: do not use `PooledArray` for string variables if the number of unique values exceeds `pool_thres`; a non-positive value avoids using `PooledArray`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
 function readstat(filepath;
+        ext = lowercase(splitext(filepath)[2]),
         usecols::Union{ColumnSelector, Nothing} = nothing,
         row_limit::Union{Integer, Nothing} = nothing,
         row_offset::Integer = 0,
         convert_datetime::Bool = true,
-        useinlinestring::Bool = true,
+        inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32,
+        pool_width::Integer = 64,
         pool_thres::Integer = 500,
         file_encoding::Union{String, Nothing} = nothing,
         handler_encoding::Union{String, Nothing} = nothing)
@@ -46,8 +50,8 @@ function readstat(filepath;
         usecols = Set{Union{Int,Symbol}}(
             idx isa Integer ? Int(idx) : Symbol(idx) for idx in usecols)
     end
-    ctx = _parse_all(filepath, usecols, row_limit, row_offset,
-        useinlinestring, pool_thres, file_encoding, handler_encoding)
+    ctx = _parse_all(filepath, ext, usecols, row_limit, row_offset,
+        inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
     tb = ctx.tb
     cols = _columns(tb)
     m = _meta(tb)
@@ -91,14 +95,15 @@ from a supported data file located at `filepath`.
 - SPSS: `.sav` and `por`.
 
 # Keywords
+- `ext = lowercase(splitext(filepath)[2])`: extension of data file for choosing the parser.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
 - `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
 """
 function readstatmeta(filepath;
+        ext = lowercase(splitext(filepath)[2]),
         file_encoding::Union{String, Nothing} = nothing,
         handler_encoding::Union{String, Nothing} = nothing)
     filepath = string(filepath)
-    ext = lowercase(splitext(filepath)[2])
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     m = ReadStatMeta()

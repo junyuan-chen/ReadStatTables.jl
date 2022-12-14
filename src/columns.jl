@@ -9,7 +9,7 @@ const DoubleColumn = SentinelVector{Float64, Float64, Missing, Vector{Float64}}
 const DateColumn = SentinelVector{Date, Date, Missing, Vector{Date}}
 const TimeColumn = SentinelVector{DateTime, DateTime, Missing, Vector{DateTime}}
 const PooledColumn = Tuple{PooledVector{String, UInt16, Vector{UInt16}}, Int}
-for sz in (3, 7, 15, 31)
+for sz in (3, 7, 15, 31, 63, 127, 255)
     colname = Symbol(:Str, sz, :Column)
     strtype = Symbol(:String, sz)
     @eval const $colname = Vector{$strtype}
@@ -42,10 +42,14 @@ struct ReadStatColumns
     str7::Vector{Str7Column}
     str15::Vector{Str15Column}
     str31::Vector{Str31Column}
+    str63::Vector{Str63Column}
+    str127::Vector{Str127Column}
+    str255::Vector{Str255Column}
     ReadStatColumns() = new(Tuple{Int,Int}[], StringColumn[], Int8Column[],
         Int16Column[], Int32Column[], FloatColumn[], DoubleColumn[],
         DateColumn[], TimeColumn[], PooledColumn[],
-        Str3Column[], Str7Column[], Str15Column[], Str31Column[])
+        Str3Column[], Str7Column[], Str15Column[], Str31Column[],
+        Str63Column[], Str127Column[], Str255Column[])
 end
 
 # If-else branching is needed for type stability
@@ -77,6 +81,12 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, i::Int)
         return getfield(cols, 13)[n]
     elseif m === 14
         return getfield(cols, 14)[n]
+    elseif m === 15
+        return getfield(cols, 15)[n]
+    elseif m === 16
+        return getfield(cols, 16)[n]
+    elseif m === 17
+        return getfield(cols, 17)[n]
     end
 end
 
@@ -108,6 +118,12 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, r, c::Int
         return getindex(getfield(cols, 13)[n], r)
     elseif m === 14
         return getindex(getfield(cols, 14)[n], r)
+    elseif m === 15
+        return getindex(getfield(cols, 15)[n], r)
+    elseif m === 16
+        return getindex(getfield(cols, 16)[n], r)
+    elseif m === 17
+        return getindex(getfield(cols, 17)[n], r)
     end
 end
 
@@ -139,13 +155,22 @@ Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::In
         return setindex!(getfield(cols, 13)[n], v, r)
     elseif m === 14
         return setindex!(getfield(cols, 14)[n], v, r)
+    elseif m === 15
+        return setindex!(getfield(cols, 15)[n], v, r)
+    elseif m === 16
+        return setindex!(getfield(cols, 16)[n], v, r)
+    elseif m === 17
+        return setindex!(getfield(cols, 17)[n], v, r)
     end
 end
 
-for sz in (3, 7, 15, 31)
+for sz in (3, 7, 15, 31, 63, 127, 255)
     strsz = Symbol(:_str, sz)
     strtype = Symbol(:String, sz)
-    @eval $strsz(str::Ptr{UInt8}) = str == C_NULL ? $strtype() : $strtype(str)
+    @eval begin
+        $strsz(str::Ptr{UInt8}) = str == C_NULL ?
+            $strtype() : $strtype(str, Int(ccall(:strlen, Csize_t, (Ptr{UInt8},), str)))
+    end
 end
 
 Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
@@ -207,6 +232,18 @@ Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
         v = _str31(string_value(value))
         col = getfield(cols, 14)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 15
+        v = _str63(string_value(value))
+        col = getfield(cols, 15)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 16
+        v = _str127(string_value(value))
+        col = getfield(cols, 16)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 17
+        v = _str255(string_value(value))
+        col = getfield(cols, 17)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     end
 end
 
@@ -235,99 +272,38 @@ end
         push!(getfield(cols, 13)[n], String15())
     elseif m === 14
         push!(getfield(cols, 14)[n], String31())
+    elseif m === 15
+        push!(getfield(cols, 15)[n], String63())
+    elseif m === 16
+        push!(getfield(cols, 16)[n], String127())
+    elseif m === 17
+        push!(getfield(cols, 17)[n], String255())
     end
     return nothing
 end
 
-function Base.push!(cols::ReadStatColumns, v::StringColumn)
-    tar = getfield(cols, 2)
-    push!(tar, v)
-    push!(cols.index, (2, length(tar)))
-    return cols
+for (i, etype) in enumerate((:String, :Int8, :Int16, :Int32, :Float, :Double, :Date, :Time, :Pooled))
+    coltype = Symbol(etype, :Column)
+    @eval begin
+        function Base.push!(cols::ReadStatColumns, v::$coltype)
+            tar = getfield(cols, $(1+i))
+            push!(tar, v)
+            push!(cols.index, ($(1+i), length(tar)))
+            return cols
+        end
+    end
 end
 
-function Base.push!(cols::ReadStatColumns, v::Int8Column)
-    tar = getfield(cols, 3)
-    push!(tar, v)
-    push!(cols.index, (3, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::Int16Column)
-    tar = getfield(cols, 4)
-    push!(tar, v)
-    push!(cols.index, (4, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::Int32Column)
-    tar = getfield(cols, 5)
-    push!(tar, v)
-    push!(cols.index, (5, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::FloatColumn)
-    tar = getfield(cols, 6)
-    push!(tar, v)
-    push!(cols.index, (6, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::DoubleColumn)
-    tar = getfield(cols, 7)
-    push!(tar, v)
-    push!(cols.index, (7, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::DateColumn)
-    tar = getfield(cols, 8)
-    push!(tar, v)
-    push!(cols.index, (8, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::TimeColumn)
-    tar = getfield(cols, 9)
-    push!(tar, v)
-    push!(cols.index, (9, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::PooledColumn)
-    tar = getfield(cols, 10)
-    push!(tar, v)
-    push!(cols.index, (10, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::Str3Column)
-    tar = getfield(cols, 11)
-    push!(tar, v)
-    push!(cols.index, (11, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::Str7Column)
-    tar = getfield(cols, 12)
-    push!(tar, v)
-    push!(cols.index, (12, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::Str15Column)
-    tar = getfield(cols, 13)
-    push!(tar, v)
-    push!(cols.index, (13, length(tar)))
-    return cols
-end
-
-function Base.push!(cols::ReadStatColumns, v::Str31Column)
-    tar = getfield(cols, 14)
-    push!(tar, v)
-    push!(cols.index, (14, length(tar)))
-    return cols
+for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
+    coltype = Symbol(:Str, sz, :Column)
+    @eval begin
+        function Base.push!(cols::ReadStatColumns, v::$coltype)
+            tar = getfield(cols, $(10+i))
+            push!(tar, v)
+            push!(cols.index, ($(10+i), length(tar)))
+            return cols
+        end
+    end
 end
 
 Base.push!(cols::ReadStatColumns, vs...) = (foreach(v->push!(cols, v), vs); cols)

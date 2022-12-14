@@ -5,7 +5,8 @@ jltype(type::readstat_type_t) = jltypes[convert(Int, type)+1]
 mutable struct ParserContext
     tb::ReadStatTable
     usecols::Union{UnitRange, Set, Nothing}
-    useinlinestring::Bool
+    inlinestring_width::Int
+    pool_width::Int
     pool_thres::Int
 end
 
@@ -124,30 +125,32 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     # Row count is not always available from metadata
     N = max(m.row_count, 0)
     cols = _columns(tb)
+    inlinestring_width = ctx.inlinestring_width
     pool_thres = ctx.pool_thres
     usepool = pool_thres > 0
     T = jltype(type)
     if T === String
         # No "" for String1
         # StrL in Stata has width being 0
-        if width == 0 || width > 32
-            if usepool
-                push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
-            else
-                push!(cols, fill("", N))
-            end
-        elseif ctx.useinlinestring
-            if width < 5
-                push!(cols, fill(String3(), N))
-            elseif width < 9
-                push!(cols, fill(String7(), N))
-            elseif width < 17
-                push!(cols, fill(String15(), N))
-            elseif width < 33
-                push!(cols, fill(String31(), N))
-            end
+        width_offset = Int(m.file_ext == ".dta")
+        if (width == 0 || width >= ctx.pool_width + width_offset) && usepool
+            push!(cols, (PooledArray(RefArray(fill(zero(UInt16), N)),
+                Dict(""=>zero(UInt16)), [""]), pool_thres))
+        elseif width < min(4, inlinestring_width) + width_offset
+            push!(cols, fill(String3(), N))
+        elseif width < min(8, inlinestring_width) + width_offset
+            push!(cols, fill(String7(), N))
+        elseif width < min(16, inlinestring_width) + width_offset
+            push!(cols, fill(String15(), N))
+        elseif width < min(32, inlinestring_width) + width_offset
+            push!(cols, fill(String31(), N))
+        elseif width < min(64, inlinestring_width) + width_offset
+            push!(cols, fill(String63(), N))
+        elseif width < min(128, inlinestring_width) + width_offset
+            push!(cols, fill(String127(), N))
+        elseif width < min(256, inlinestring_width) + width_offset
+            push!(cols, fill(String255(), N))
         else
-            # Do not use PooledArray for short strings
             push!(cols, fill("", N))
         end
     elseif T === Int8
@@ -204,15 +207,14 @@ end
 
 _error(e::readstat_error_t) = e === READSTAT_OK ? nothing : error(error_message(e))
 
-function _parse_all(filepath, usecols, row_limit, row_offset,
-        useinlinestring, pool_thres, file_encoding, handler_encoding)
-    ext = lowercase(splitext(filepath)[2])
+function _parse_all(filepath, ext, usecols, row_limit, row_offset,
+        inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     tb = ReadStatTable()
     m = _meta(tb)
     m.file_ext = ext
-    ctx = ParserContext(tb, usecols, useinlinestring, pool_thres)
+    ctx = ParserContext(tb, usecols, inlinestring_width, pool_width, pool_thres)
     refctx = Ref{ParserContext}(ctx)
     parser = parser_init()
     set_metadata_handler(parser, @cfunction(handle_metadata!,
