@@ -6,6 +6,7 @@ mutable struct ParserContext
     tb::ReadStatTable
     usecols::Union{UnitRange, Set, Nothing}
     useinlinestring::Bool
+    pool_width::Int
     pool_thres::Int
 end
 
@@ -130,24 +131,25 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     if T === String
         # No "" for String1
         # StrL in Stata has width being 0
-        if width == 0 || width > 32
-            if usepool
-                push!(cols, (PooledArray(fill("", N), UInt16), pool_thres))
+        width_offset = Int(m.file_ext == ".dta")
+        if (width == 0 || width >= ctx.pool_width + width_offset) && usepool
+            push!(cols, (PooledArray(RefArray(fill(zero(UInt16), N)),
+                Dict(""=>zero(UInt16)), [""]), pool_thres))
+        elseif ctx.useinlinestring
+            if width < 4 + width_offset
+                push!(cols, fill(String3(), N))
+            elseif width < 8 + width_offset
+                push!(cols, fill(String7(), N))
+            elseif width < 16 + width_offset
+                push!(cols, fill(String15(), N))
+            elseif width < 32 + width_offset
+                push!(cols, fill(String31(), N))
+            elseif width < 64 + width_offset
+                push!(cols, fill(String63(), N))
             else
                 push!(cols, fill("", N))
             end
-        elseif ctx.useinlinestring
-            if width < 5
-                push!(cols, fill(String3(), N))
-            elseif width < 9
-                push!(cols, fill(String7(), N))
-            elseif width < 17
-                push!(cols, fill(String15(), N))
-            elseif width < 33
-                push!(cols, fill(String31(), N))
-            end
         else
-            # Do not use PooledArray for short strings
             push!(cols, fill("", N))
         end
     elseif T === Int8
@@ -205,14 +207,14 @@ end
 _error(e::readstat_error_t) = e === READSTAT_OK ? nothing : error(error_message(e))
 
 function _parse_all(filepath, usecols, row_limit, row_offset,
-        useinlinestring, pool_thres, file_encoding, handler_encoding)
+        useinlinestring, pool_width, pool_thres, file_encoding, handler_encoding)
     ext = lowercase(splitext(filepath)[2])
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     tb = ReadStatTable()
     m = _meta(tb)
     m.file_ext = ext
-    ctx = ParserContext(tb, usecols, useinlinestring, pool_thres)
+    ctx = ParserContext(tb, usecols, useinlinestring, pool_width, pool_thres)
     refctx = Ref{ParserContext}(ctx)
     parser = parser_init()
     set_metadata_handler(parser, @cfunction(handle_metadata!,

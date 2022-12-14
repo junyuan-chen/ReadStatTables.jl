@@ -74,13 +74,13 @@ function parse_datetime(col::AbstractVector, epoch::Union{DateTime,Date}, delta:
     if hasmissing
         @inbounds for i in eachindex(col)
             v = col[i]
-            out[i] = ismissing(v) ? missing : epoch + v * delta
+            out[i] = ismissing(v) ? missing : epoch + round(Int64, v) * delta
         end
     else
         tar = parent(out)
         @inbounds for i in eachindex(col)
             v = col[i]
-            tar[i] = epoch + v * delta
+            tar[i] = epoch + round(Int64, v) * delta
         end
     end
     return out

@@ -252,6 +252,8 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable, i::Int)
         return getfield(cols, 13)[n]
     elseif m === 14
         return getfield(cols, 14)[n]
+    elseif m === 15
+        return getfield(cols, 15)[n]
     end
 end
 
