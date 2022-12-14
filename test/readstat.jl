@@ -155,8 +155,8 @@ end
     @test eltype(strtype.vstr15) == String15
     @test eltype(strtype.vstr16) == String31
     @test eltype(strtype.vstr31) == String31
-    @test eltype(strtype.vstr32) == String63
-    @test eltype(strtype.vstr63) == String63
+    @test eltype(strtype.vstr32) == String
+    @test eltype(strtype.vstr63) == String
     @test eltype(strtype.vstr64) == String
     @test strtype.vstr64 isa PooledArray
 
