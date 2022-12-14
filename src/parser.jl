@@ -207,9 +207,8 @@ end
 
 _error(e::readstat_error_t) = e === READSTAT_OK ? nothing : error(error_message(e))
 
-function _parse_all(filepath, usecols, row_limit, row_offset,
+function _parse_all(filepath, ext, usecols, row_limit, row_offset,
         inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
-    ext = lowercase(splitext(filepath)[2])
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     tb = ReadStatTable()

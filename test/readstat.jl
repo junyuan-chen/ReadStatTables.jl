@@ -192,14 +192,14 @@ end
     d = readstat(sav)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
         5×7 ReadStatTable:
-         Row │   mychar    mynum               mydate                dtime            mylabl             myord               mytime
-             │ String15  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
-        ─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-           1 │        a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
-           2 │        b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
-           3 │        c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
-           4 │        d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
-           5 │        e   1000.3              missing              missing              Male               low              missing"""
+         Row │ mychar    mynum               mydate                dtime            mylabl             myord               mytime
+             │ String  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
+        ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+           1 │      a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
+           2 │      b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
+           3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
+           4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
+           5 │      e   1000.3              missing              missing              Male               low              missing"""
 
     m = metadata(d)
     @test sprint(show, MIME("text/plain"), m)[1:83] == """
@@ -231,14 +231,14 @@ end
     d = readstat(por)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
         5×7 ReadStatTable:
-         Row │   MYCHAR    MYNUM               MYDATE                DTIME            MYLABL             MYORD               MYTIME
-             │ String15  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
-        ─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-           1 │        a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
-           2 │        b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
-           3 │        c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
-           4 │        d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
-           5 │        e   1000.3              missing              missing              Male               low              missing"""
+         Row │ MYCHAR    MYNUM               MYDATE                DTIME            MYLABL             MYORD               MYTIME
+             │ String  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
+        ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+           1 │      a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
+           2 │      b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
+           3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
+           4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
+           5 │      e   1000.3              missing              missing              Male               low              missing"""
 
     m = metadata(d)
     @test sprint(show, MIME("text/plain"), m)[1:84] == """
