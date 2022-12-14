@@ -12,8 +12,11 @@ function gettestcolumns(N::Int)
     str7col = fill(String7(), N)
     str15col = fill(String15(), N)
     str31col = fill(String31(), N)
+    str63col = fill(String63(), N)
+    str127col = fill(String127(), N)
+    str255col = fill(String255(), N)
     return (strcol, int8col, int16col, int32col, floatcol, doublecol, datecol, timecol,
-        pooledcol, str3col, str7col, str15col, str31col)
+        pooledcol, str3col, str7col, str15col, str31col, str63col, str127col, str255col)
 end
 
 @testset "ReadStatColumns" begin
@@ -25,9 +28,9 @@ end
 
     columns = gettestcolumns(10)
     push!(cols, columns...)
-    @test size(cols) == (10, 13)
-    @test length(cols) == 13
-    @test cols.index == [(n, 1) for n in 2:14]
+    @test size(cols) == (10, 16)
+    @test length(cols) == 16
+    @test cols.index == [(n, 1) for n in 2:17]
     for (i, col) in enumerate(columns)
         if i == 9
             @test cols[i] === col[1]
@@ -35,9 +38,9 @@ end
             @test cols[i] === col
         end
     end
-    @test sprint(show, cols) == "10×13 ReadStatColumns"
+    @test sprint(show, cols) == "10×16 ReadStatColumns"
 
-    vals = ["a", Int8(1), Int16(1), Int32(1), Float32(1), Float64(1), Date(1), DateTime(1), ("a" for _ in 1:5)...]
+    vals = ["a", Int8(1), Int16(1), Int32(1), Float32(1), Float64(1), Date(1), DateTime(1), ("a" for _ in 1:8)...]
     for (i, (v, col)) in enumerate(zip(vals, columns))
         cols[1,i] = v
         @test cols[1,i] == v
@@ -56,11 +59,11 @@ end
         end
     end
 
-    for i in 9:13
+    for i in 9:16
         _pushmissing!(cols, i)
         @test cols[11,i] == ""
     end
 
     @test iterate(cols) === (cols[1], 2)
-    @test iterate(cols, 14) === nothing
+    @test iterate(cols, 17) === nothing
 end

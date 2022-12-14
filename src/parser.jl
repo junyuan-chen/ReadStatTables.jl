@@ -5,7 +5,7 @@ jltype(type::readstat_type_t) = jltypes[convert(Int, type)+1]
 mutable struct ParserContext
     tb::ReadStatTable
     usecols::Union{UnitRange, Set, Nothing}
-    useinlinestring::Bool
+    inlinestring_width::Int
     pool_width::Int
     pool_thres::Int
 end
@@ -125,6 +125,7 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
     # Row count is not always available from metadata
     N = max(m.row_count, 0)
     cols = _columns(tb)
+    inlinestring_width = ctx.inlinestring_width
     pool_thres = ctx.pool_thres
     usepool = pool_thres > 0
     T = jltype(type)
@@ -135,20 +136,20 @@ function handle_variable!(index::Cint, variable::Ptr{Cvoid}, val_labels::Cstring
         if (width == 0 || width >= ctx.pool_width + width_offset) && usepool
             push!(cols, (PooledArray(RefArray(fill(zero(UInt16), N)),
                 Dict(""=>zero(UInt16)), [""]), pool_thres))
-        elseif ctx.useinlinestring
-            if width < 4 + width_offset
-                push!(cols, fill(String3(), N))
-            elseif width < 8 + width_offset
-                push!(cols, fill(String7(), N))
-            elseif width < 16 + width_offset
-                push!(cols, fill(String15(), N))
-            elseif width < 32 + width_offset
-                push!(cols, fill(String31(), N))
-            elseif width < 64 + width_offset
-                push!(cols, fill(String63(), N))
-            else
-                push!(cols, fill("", N))
-            end
+        elseif width < min(4, inlinestring_width) + width_offset
+            push!(cols, fill(String3(), N))
+        elseif width < min(8, inlinestring_width) + width_offset
+            push!(cols, fill(String7(), N))
+        elseif width < min(16, inlinestring_width) + width_offset
+            push!(cols, fill(String15(), N))
+        elseif width < min(32, inlinestring_width) + width_offset
+            push!(cols, fill(String31(), N))
+        elseif width < min(64, inlinestring_width) + width_offset
+            push!(cols, fill(String63(), N))
+        elseif width < min(128, inlinestring_width) + width_offset
+            push!(cols, fill(String127(), N))
+        elseif width < min(256, inlinestring_width) + width_offset
+            push!(cols, fill(String255(), N))
         else
             push!(cols, fill("", N))
         end
@@ -207,14 +208,14 @@ end
 _error(e::readstat_error_t) = e === READSTAT_OK ? nothing : error(error_message(e))
 
 function _parse_all(filepath, usecols, row_limit, row_offset,
-        useinlinestring, pool_width, pool_thres, file_encoding, handler_encoding)
+        inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
     ext = lowercase(splitext(filepath)[2])
     parse_ext = get(ext2parser, ext, nothing)
     parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     tb = ReadStatTable()
     m = _meta(tb)
     m.file_ext = ext
-    ctx = ParserContext(tb, usecols, useinlinestring, pool_width, pool_thres)
+    ctx = ParserContext(tb, usecols, inlinestring_width, pool_width, pool_thres)
     refctx = Ref{ParserContext}(ctx)
     parser = parser_init()
     set_metadata_handler(parser, @cfunction(handle_metadata!,

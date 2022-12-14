@@ -24,7 +24,7 @@ from a supported data file located at `filepath`.
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
-- `useinlinestring::Bool = true`: use a fixed-width string type that can be stored inline for any string variable with width below 64 and `pool_width`.
+- `inlinestring_width::Integer = 64`: use a fixed-width string type that can be stored inline for any string variable with width below `inlinestring_width` and `pool_width`; a non-positive value avoids using any inline string type.
 - `pool_width::Integer = 64`: only attempt to use `PooledArray` for string variables with width of at least 64.
 - `pool_thres::Integer = 500`: do not use `PooledArray` for string variables if the number of unique values exceeds `pool_thres`; a non-positive value avoids using `PooledArray`.
 - `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
@@ -35,7 +35,7 @@ function readstat(filepath;
         row_limit::Union{Integer, Nothing} = nothing,
         row_offset::Integer = 0,
         convert_datetime::Bool = true,
-        useinlinestring::Bool = true,
+        inlinestring_width::Integer = 64,
         pool_width::Integer = 64,
         pool_thres::Integer = 500,
         file_encoding::Union{String, Nothing} = nothing,
@@ -49,7 +49,7 @@ function readstat(filepath;
             idx isa Integer ? Int(idx) : Symbol(idx) for idx in usecols)
     end
     ctx = _parse_all(filepath, usecols, row_limit, row_offset,
-        useinlinestring, pool_width, pool_thres, file_encoding, handler_encoding)
+        inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
     tb = ctx.tb
     cols = _columns(tb)
     m = _meta(tb)

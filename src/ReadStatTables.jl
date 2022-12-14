@@ -19,7 +19,7 @@ import Tables: columnnames
 export refarray, unwrap, nrow, ncol, metadata, metadatakeys, metadata!,
     colmetadata, colmetadatakeys, colmetadata!
 export Date, DateTime # Needed for avoiding the "Dates." qualifier when printing tables
-export String3, String7, String15, String31, String63
+export String3, String7, String15, String31, String63, String127, String255
 export columnnames
 
 export LabeledValue,

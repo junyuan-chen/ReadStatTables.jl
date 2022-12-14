@@ -9,7 +9,7 @@ const DoubleColumn = SentinelVector{Float64, Float64, Missing, Vector{Float64}}
 const DateColumn = SentinelVector{Date, Date, Missing, Vector{Date}}
 const TimeColumn = SentinelVector{DateTime, DateTime, Missing, Vector{DateTime}}
 const PooledColumn = Tuple{PooledVector{String, UInt16, Vector{UInt16}}, Int}
-for sz in (3, 7, 15, 31, 63)
+for sz in (3, 7, 15, 31, 63, 127, 255)
     colname = Symbol(:Str, sz, :Column)
     strtype = Symbol(:String, sz)
     @eval const $colname = Vector{$strtype}
@@ -43,10 +43,13 @@ struct ReadStatColumns
     str15::Vector{Str15Column}
     str31::Vector{Str31Column}
     str63::Vector{Str63Column}
+    str127::Vector{Str127Column}
+    str255::Vector{Str255Column}
     ReadStatColumns() = new(Tuple{Int,Int}[], StringColumn[], Int8Column[],
         Int16Column[], Int32Column[], FloatColumn[], DoubleColumn[],
         DateColumn[], TimeColumn[], PooledColumn[],
-        Str3Column[], Str7Column[], Str15Column[], Str31Column[], Str63Column[])
+        Str3Column[], Str7Column[], Str15Column[], Str31Column[],
+        Str63Column[], Str127Column[], Str255Column[])
 end
 
 # If-else branching is needed for type stability
@@ -80,6 +83,10 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, i::Int)
         return getfield(cols, 14)[n]
     elseif m === 15
         return getfield(cols, 15)[n]
+    elseif m === 16
+        return getfield(cols, 16)[n]
+    elseif m === 17
+        return getfield(cols, 17)[n]
     end
 end
 
@@ -113,6 +120,10 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, r, c::Int
         return getindex(getfield(cols, 14)[n], r)
     elseif m === 15
         return getindex(getfield(cols, 15)[n], r)
+    elseif m === 16
+        return getindex(getfield(cols, 16)[n], r)
+    elseif m === 17
+        return getindex(getfield(cols, 17)[n], r)
     end
 end
 
@@ -146,13 +157,20 @@ Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::In
         return setindex!(getfield(cols, 14)[n], v, r)
     elseif m === 15
         return setindex!(getfield(cols, 15)[n], v, r)
+    elseif m === 16
+        return setindex!(getfield(cols, 16)[n], v, r)
+    elseif m === 17
+        return setindex!(getfield(cols, 17)[n], v, r)
     end
 end
 
-for sz in (3, 7, 15, 31, 63)
+for sz in (3, 7, 15, 31, 63, 127, 255)
     strsz = Symbol(:_str, sz)
     strtype = Symbol(:String, sz)
-    @eval $strsz(str::Ptr{UInt8}) = str == C_NULL ? $strtype() : $strtype(str)
+    @eval begin
+        $strsz(str::Ptr{UInt8}) = str == C_NULL ?
+            $strtype() : $strtype(str, Int(ccall(:strlen, Csize_t, (Ptr{UInt8},), str)))
+    end
 end
 
 Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
@@ -218,6 +236,14 @@ Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
         v = _str63(string_value(value))
         col = getfield(cols, 15)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 16
+        v = _str127(string_value(value))
+        col = getfield(cols, 16)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 17
+        v = _str255(string_value(value))
+        col = getfield(cols, 17)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     end
 end
 
@@ -248,6 +274,10 @@ end
         push!(getfield(cols, 14)[n], String31())
     elseif m === 15
         push!(getfield(cols, 15)[n], String63())
+    elseif m === 16
+        push!(getfield(cols, 16)[n], String127())
+    elseif m === 17
+        push!(getfield(cols, 17)[n], String255())
     end
     return nothing
 end
@@ -264,7 +294,7 @@ for (i, etype) in enumerate((:String, :Int8, :Int16, :Int32, :Float, :Double, :D
     end
 end
 
-for (i, sz) in enumerate((3, 7, 15, 31, 63))
+for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
     coltype = Symbol(:Str, sz, :Column)
     @eval begin
         function Base.push!(cols::ReadStatColumns, v::$coltype)

@@ -160,7 +160,16 @@ end
     @test eltype(strtype.vstr64) == String
     @test strtype.vstr64 isa PooledArray
 
-    strtype = readstat(stringtypes, useinlinestring=false)
+    strtype = readstat(stringtypes, inlinestring_width=512, pool_width=256)
+    @test eltype(strtype.vstr64) == String127
+    @test eltype(strtype.vstr127) == String127
+    @test eltype(strtype.vstr128) == String255
+    @test eltype(strtype.vstr255) == String255
+    @test eltype(strtype.vstr256) == String
+    @test strtype.vstr255 isa Array
+    @test strtype.vstr256 isa PooledArray
+
+    strtype = readstat(stringtypes, inlinestring_width=0)
     @test all(x->eltype(x)==String, strtype)
     @test strtype.vstr63 isa Array
     strtype = readstat(stringtypes, pool_width=32)
