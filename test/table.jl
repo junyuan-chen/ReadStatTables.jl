@@ -179,6 +179,22 @@ end
             @test tb[i] === columns[i]
         end
     end
+
+    columns, cols = gettestchainedcolumns(5)
+    N = 21
+    names = [Symbol("n",i) for i in 1:N]
+    hms = fill(true, N)
+    ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:N], fill("%tf", N),
+        fill(READSTAT_TYPE_DOUBLE, N), fill(Symbol(), N), fill(Csize_t(1), N),
+        fill(Cint(1), N), fill(READSTAT_MEASURE_UNKNOWN, N),
+        fill(READSTAT_ALIGNMENT_UNKNOWN, N)))
+    tb = ReadStatTable(cols, names, vls, hms, m, ms)
+    for i in 1:N
+        if i in 2:2:10 || 11 < i < 14
+            @test ismissing(tb[1,i])
+        end
+        @test tb[i] === columns[i]
+    end
 end
 
 @testset "metadata colmetadata" begin

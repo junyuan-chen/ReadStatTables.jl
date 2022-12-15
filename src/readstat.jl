@@ -8,6 +8,17 @@ a `UnitRange` of integers, an array or a set of [`ColumnIndex`](@ref).
 """
 const ColumnSelector = Union{ColumnIndex, UnitRange, AbstractArray, AbstractSet}
 
+function _setntasks(ncells::Integer)
+    nthd = Threads.nthreads()
+    if ncells < 10_000
+        return min(2, nthd)
+    elseif ncells < 1_000_000
+        return min(max(nthd÷2, 2), nthd)
+    else
+        return nthd
+    end
+end
+
 """
     readstat(filepath; kwargs...)
 
@@ -24,6 +35,7 @@ from a supported data file located at `filepath`.
 - `usecols::Union{ColumnSelector, Nothing} = nothing`: only collect data from the specified columns (variables); collect all columns if `usecols=nothing`.
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
+- `ntasks::Union{Integer, Nothing} = nothing`: number of tasks spawned to read the data file in concurrent chunks with multiple threads; with `ntasks` being `nothing` or smaller than 1, select a default value based on the size of data file and the number of threads available (`Threads.nthreads()`); not applicable to `.xpt` and `.por` files where row count is unknown from metadata.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
 - `inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32`: use a fixed-width string type that can be stored inline for any string variable with width below `inlinestring_width` and `pool_width`; a non-positive value avoids using any inline string type; not recommended for SPSS files.
 - `pool_width::Integer = 64`: only attempt to use `PooledArray` for string variables with width of at least 64.
@@ -36,6 +48,7 @@ function readstat(filepath;
         usecols::Union{ColumnSelector, Nothing} = nothing,
         row_limit::Union{Integer, Nothing} = nothing,
         row_offset::Integer = 0,
+        ntasks::Union{Integer, Nothing} = nothing,
         convert_datetime::Bool = true,
         inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32,
         pool_width::Integer = 64,
@@ -45,17 +58,74 @@ function readstat(filepath;
 
     # Do not restrict argument type of filepath to allow AbstractPath
     filepath = string(filepath)
+    parse_ext = get(ext2parser, ext, nothing)
+    parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     typeof(usecols) <: ColumnIndex && (usecols = (usecols,))
     if !(typeof(usecols) <: Union{UnitRange, Nothing})
         usecols = Set{Union{Int,Symbol}}(
             idx isa Integer ? Int(idx) : Symbol(idx) for idx in usecols)
     end
-    ctx = _parse_all(filepath, ext, usecols, row_limit, row_offset,
-        inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
-    tb = ctx.tb
+    row_limit === nothing || row_limit > 0 ||
+        throw(ArgumentError("non-positive row_limit is not allowed"))
+    row_offset < 0 && throw(ArgumentError("negative row_offset is not allowed"))
+    pool_thres_max = Int(typemax(UInt16))
+    pool_thres > pool_thres_max && throw(ArgumentError(
+        "pool_thres greater than $pool_thres_max is not supported"))
+
+    # row_count is not in metadata for some formats
+    if ext ∈ (".xpt", ".por")
+        ntasks = 1
+    elseif ntasks === nothing || ntasks < 1
+        ntasks = filesize(filepath) < 150_000 ? 1 : nothing
+    end
+
+    if ntasks == 1
+        tb = _parse_all(filepath, ext, parse_ext, usecols, row_limit, row_offset,
+            inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
+    else
+        m, names, cm, vlbls = _parse_allmeta(filepath, ext, parse_ext, usecols,
+            file_encoding, handler_encoding)
+        nrows = m.row_count - row_offset
+        ncols = length(cm)
+        ntasks === nothing && (ntasks = _setntasks(nrows * ncols))
+        taskrows = fill(nrows÷ntasks, ntasks)
+        taskrows[1] = nrows - (ntasks-1) * taskrows[1]
+        taskcols = map(i->ReadStatColumns(), 1:ntasks)
+        width_offset = Int(m.file_ext == ".dta")
+        @inbounds for i in 1:ntasks
+            for j in 1:ncols
+                T = jltype(cm.type[j])
+                width = cm.storage_width[j]
+                _pushcolumn!(taskcols[i], T, taskrows[i], width, width_offset,
+                    inlinestring_width, pool_width, pool_thres)
+            end
+        end
+        tbs = map(x->ReadStatTable(x, names, vlbls, fill(false, ncols),
+            m, cm), taskcols)
+        offsets = Vector{Int}(undef, ntasks)
+        offsets[1] = row_offset
+        for i in 2:ntasks
+            offsets[i] = row_offset + taskrows[i-1]
+        end
+        @sync for i = 1:ntasks
+            # Use @wkspawn from WorkerUtilities.jl in the future?
+            Threads.@spawn begin
+                _parse_chunk!(tbs[i], filepath, parse_ext, usecols, taskrows[i],
+                    offsets[i], pool_thres, file_encoding, handler_encoding)
+            end
+        end
+        cols = ChainedReadStatColumns()
+        hms = Vector{Bool}(undef, ncols)
+        for i in 1:ncols
+            hmsi = any(x->@inbounds(_hasmissing(x)[i]), tbs)
+            @inbounds hms[i] = hmsi
+            _pushchain!(cols, hmsi, map(x->@inbounds(x[i]), taskcols))
+        end
+        tb = ReadStatTable(cols, names, vlbls, hms, m, cm)
+    end
+
     cols = _columns(tb)
-    m = _meta(tb)
-    ext = m.file_ext
+    idate, itime = cols isa ReadStatColumns ? (8, 9) : (13, 14)
     dtformats = dt_formats[ext]
     isdta = ext == ".dta"
     if convert_datetime
@@ -69,11 +139,11 @@ function readstat(filepath;
                 col = parse_datetime(col0, epoch, delta, _hasmissing(tb)[i])
                 if epoch isa Date
                     push!(cols.date, col)
-                    cols.index[i] = (8, length(cols.date))
+                    cols.index[i] = (idate, length(cols.date))
                     empty!(col0)
                 elseif epoch isa DateTime
                     push!(cols.time, col)
-                    cols.index[i] = (9, length(cols.time))
+                    cols.index[i] = (itime, length(cols.time))
                     empty!(col0)
                 end
             end
@@ -88,6 +158,7 @@ end
 Return a [`ReadStatMeta`](@ref) that collects file-level metadata
 without reading the full data
 from a supported data file located at `filepath`.
+See also [`readstatallmeta`](@ref).
 
 # Accepted File Extensions
 - Stata: `.dta`.
@@ -121,4 +192,40 @@ function readstatmeta(filepath;
     _error(parse_ext(parser, filepath, ctx))
     parser_free(parser)
     return m
+end
+
+"""
+    readstatallmeta(filepath; kwargs...)
+
+Return all metadata including value labels without reading the full data
+from a supported data file located at `filepath`.
+The four returned objects are for file-level metadata,
+variable names, variable-level metadata and value labels respectively.
+See also [`readstatmeta`](@ref).
+
+# Accepted File Extensions
+- Stata: `.dta`.
+- SAS: `.sas7bdat` and `.xpt`.
+- SPSS: `.sav` and `por`.
+
+# Keywords
+- `ext = lowercase(splitext(filepath)[2])`: extension of data file for choosing the parser.
+- `usecols::Union{ColumnSelector, Nothing} = nothing`: only collect variable-level metadata from the specified columns (variables); collect all columns if `usecols=nothing`.
+- `file_encoding::Union{String, Nothing} = nothing`: manually specify the file character encoding; need to be an `iconv`-compatible name.
+- `handler_encoding::Union{String, Nothing} = nothing`: manually specify the handler character encoding; default to UTF-8.
+"""
+function readstatallmeta(filepath;
+        ext = lowercase(splitext(filepath)[2]),
+        usecols::Union{ColumnSelector, Nothing} = nothing,
+        file_encoding::Union{String, Nothing} = nothing,
+        handler_encoding::Union{String, Nothing} = nothing)
+    filepath = string(filepath)
+    typeof(usecols) <: ColumnIndex && (usecols = (usecols,))
+    if !(typeof(usecols) <: Union{UnitRange, Nothing})
+        usecols = Set{Union{Int,Symbol}}(
+            idx isa Integer ? Int(idx) : Symbol(idx) for idx in usecols)
+    end
+    parse_ext = get(ext2parser, ext, nothing)
+    parse_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
+    return _parse_allmeta(filepath, ext, parse_ext, usecols, file_encoding, handler_encoding)
 end

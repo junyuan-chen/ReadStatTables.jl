@@ -156,17 +156,18 @@ const ColMetaVec = StructVector{ReadStatColMeta, NamedTuple{(:label, :format, :t
     Vector{readstat_alignment_t}}}, Int64}
 
 """
-    ReadStatTable <: Tables.AbstractColumns
+    ReadStatTable{Cols} <: Tables.AbstractColumns
 
 A `Tables.jl`-compatible column table that efficiently collects data
 from a Stata, SAS or SPSS file processed with the `ReadStat` C library.
 File-level and variable-level metadata can be retrieved and modified
 via methods compatible with `DataAPI.jl`.
-
+`Cols` is either `ReadStatColumns` or `ChainedReadStatColumns`
+depending on whether multiple threads are used for parsing the data file.
 See also [`ReadStatMeta`](@ref) and [`ReadStatColMeta`](@ref) for the included metadata.
 """
-struct ReadStatTable <: Tables.AbstractColumns
-    columns::ReadStatColumns
+struct ReadStatTable{Cols} <: Tables.AbstractColumns
+    columns::Cols
     names::Vector{Symbol}
     lookup::Dict{Symbol, Int}
     vallabels::Dict{Symbol, Dict}
@@ -184,9 +185,11 @@ struct ReadStatTable <: Tables.AbstractColumns
         colmeta = StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
             Symbol[], Csize_t[], Cint[], readstat_measure_t[], readstat_alignment_t[]))
         styles = Dict{Symbol, Symbol}()
-        return new(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
+        return new{ReadStatColumns}(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
     end
-    function ReadStatTable(columns::ReadStatColumns, names::Vector{Symbol},
+    function ReadStatTable(
+            columns::Union{ReadStatColumns, ChainedReadStatColumns},
+            names::Vector{Symbol},
             vallabels::Dict{Symbol, Dict}, hasmissing::Vector{Bool},
             meta::ReadStatMeta, colmeta::ColMetaVec,
             styles::Dict{Symbol, Symbol}=Dict{Symbol, Symbol}())
@@ -198,7 +201,7 @@ struct ReadStatTable <: Tables.AbstractColumns
             throw(ArgumentError("length of hasmissing does not match the number of columns"))
         length(colmeta) == N ||
             throw(ArgumentError("length of colmeta does not match the number of columns"))
-        return new(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
+        return new{typeof(columns)}(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
     end
 end
 
@@ -222,7 +225,7 @@ Base.@propagate_inbounds _colmeta!(tb::ReadStatTable, col, key, v) =
     _colmeta(tb, key)[Tables.columnindex(tb, col)] = v
 
 # getcolumn without applying value labels
-Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable, i::Int)
+Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ReadStatColumns}, i::Int)
     cols = _columns(tb)
     m, n = getfield(cols, 1)[i]
     if m === 2
@@ -261,6 +264,54 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable, i::Int)
     end
 end
 
+Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadStatColumns}, i::Int)
+    cols = _columns(tb)
+    m, n = getfield(cols, 1)[i]
+    if m === 2
+        return getfield(cols, 2)[n]
+    elseif m === 3
+        return getfield(cols, 3)[n]
+    elseif m === 4
+        return getfield(cols, 4)[n]
+    elseif m === 5
+        return getfield(cols, 5)[n]
+    elseif m === 6
+        return getfield(cols, 6)[n]
+    elseif m === 7
+        return getfield(cols, 7)[n]
+    elseif m === 8
+        return getfield(cols, 8)[n]
+    elseif m === 9
+        return getfield(cols, 9)[n]
+    elseif m === 10
+        return getfield(cols, 10)[n]
+    elseif m === 11
+        return getfield(cols, 11)[n]
+    elseif m === 12
+        return getfield(cols, 12)[n]
+    elseif m === 13
+        return getfield(cols, 13)[n]
+    elseif m === 14
+        return getfield(cols, 14)[n]
+    elseif m === 15
+        return getfield(cols, 15)[n]
+    elseif m === 16
+        return getfield(cols, 16)[n]
+    elseif m === 17
+        return getfield(cols, 17)[n]
+    elseif m === 18
+        return getfield(cols, 18)[n]
+    elseif m === 19
+        return getfield(cols, 19)[n]
+    elseif m === 20
+        return getfield(cols, 20)[n]
+    elseif m === 21
+        return getfield(cols, 21)[n]
+    elseif m === 22
+        return getfield(cols, 22)[n]
+    end
+end
+
 Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     lblname = _colmeta(tb, i, :vallabel)
     col = getcolumnfast(tb, i)
@@ -288,7 +339,7 @@ Base.@propagate_inbounds Base.getindex(tb::ReadStatTable, r, c) =
 Base.@propagate_inbounds Base.setindex!(tb::ReadStatTable, val, r, c) =
     setindex!(_columns(tb), val, r, Tables.columnindex(tb, c))
 
-function _gettype(tb::ReadStatTable, i)
+function _gettype(tb::ReadStatTable{ReadStatColumns}, i)
     T = eltype(Tables.getcolumn(tb, i))
     if T === Union{Int8, Missing}
         _hasmissing(tb)[i] || return Int8
@@ -297,6 +348,9 @@ function _gettype(tb::ReadStatTable, i)
     end
     return T
 end
+
+_gettype(tb::ReadStatTable{ChainedReadStatColumns}, i) =
+    eltype(Tables.getcolumn(tb, i))
 
 Tables.schema(tb::ReadStatTable) =
     Tables.Schema{(_names(tb)...,), Tuple{ntuple(i->_gettype(tb,i), length(tb))...}}()
@@ -342,8 +396,8 @@ function Base.show(io::IO, ::MIME"text/plain", tb::ReadStatTable)
     end
 end
 
-metadatasupport(::Type{ReadStatTable}) = (read=true, write=true)
-colmetadatasupport(::Type{ReadStatTable}) = (read=true, write=true)
+metadatasupport(::Type{<:ReadStatTable}) = (read=true, write=true)
+colmetadatasupport(::Type{<:ReadStatTable}) = (read=true, write=true)
 
 """
     metastyle(tb::ReadStatTable, [key::Union{Symbol, AbstractString}])
