@@ -95,31 +95,30 @@ function readstat(filepath;
             ntasks === nothing && (ntasks = _setntasks(nrows * ncols))
             # Ensure that each task gets at least one row
             ntasks = min(nrows, ntasks)
-            taskrows = fill(nrows÷ntasks, ntasks)
-            taskrows[1] = nrows - (ntasks-1) * taskrows[1]
+            row_limits = fill(nrows÷ntasks, ntasks)
+            row_limits[1] = nrows - (ntasks-1) * row_limits[1]
             taskcols = map(i->ReadStatColumns(), 1:ntasks)
             width_offset = Int(m.file_ext == ".dta")
             @inbounds for i in 1:ntasks
                 for j in 1:ncols
                     T = jltype(cm.type[j])
                     width = cm.storage_width[j]
-                    _pushcolumn!(taskcols[i], T, taskrows[i], width, width_offset,
+                    _pushcolumn!(taskcols[i], T, row_limits[i], width, width_offset,
                         inlinestring_width, pool_width, pool_thres)
                 end
             end
             tbs = map(x->ReadStatTable(x, names, vlbls, fill(false, ncols),
                 m, cm), taskcols)
-            offsets = Vector{Int}(undef, ntasks)
-            offsets[1] = row_offset
+            row_offsets = Vector{Int}(undef, ntasks)
+            row_offsets[1] = row_offset
             for i in 2:ntasks
-                offsets[i] = row_offset + taskrows[i-1]
+                row_offsets[i] = row_offset + row_limits[i-1]
             end
             @sync for i = 1:ntasks
                 # Use @wkspawn from WorkerUtilities.jl in the future?
-                Threads.@spawn begin
-                    _parse_chunk!(tbs[i], filepath, parse_ext, usecols, taskrows[i],
-                        offsets[i], pool_thres, file_encoding, handler_encoding)
-                end
+                Threads.@spawn(_parse_chunk!(tbs[i], filepath, parse_ext, usecols,
+                    row_limits[i], row_offsets[i], pool_thres,
+                    file_encoding, handler_encoding))
             end
             cols = ChainedReadStatColumns()
             hms = Vector{Bool}(undef, ncols)

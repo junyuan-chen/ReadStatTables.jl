@@ -11,9 +11,11 @@ for parsing the data files.
 The same C library is also the backend of popular packages in other languages such as
 [pyreadstat](https://github.com/Roche/pyreadstat) for Python
 and [haven](https://github.com/tidyverse/haven) for R.
-ReadStatTables.jl can be viewed as the Julia counterpart for similar purposes.
+As the Julia counterpart for similar purposes,
+ReadStatTables.jl leverages the state-of-the-art Julia ecosystem
+for usability and performance.
 Its read performance dominates all related packages
-based on benchmark results
+based on the benchmark results
 [here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks).
 
 ```@raw html
@@ -29,7 +31,7 @@ wrapping the C interface of ReadStat.
 
 - Efficient data collection from ReadStat parser to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible column table `ReadStatTable`.
 - Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl).
-- Integration of value labels into data columns via a customized array type `LabeledArray`.
+- Integration of value labels into data columns via a custom array type `LabeledArray`.
 - Translation of date and time values into Julia time types `Date` and `DateTime`.
 
 ## Supported File Formats

@@ -84,6 +84,12 @@ end
     @test d isa ReadStatTable{ChainedReadStatColumns}
     @test length(d.mychar.arrays[1]) == 3
 
+    d = readstat(dta, usecols=Int[], ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
+    @test sprint(show, d) == "0×0 ReadStatTable"
+    @test isempty(colmetadata(d))
+    @test length(getvaluelabels(d)) == 2
+
     d = readstat(dta, usecols=1:3, row_offset=10, ntasks=2)
     @test size(d) == (0, 3)
     @test d isa ReadStatTable{ReadStatColumns}
