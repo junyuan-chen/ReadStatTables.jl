@@ -152,7 +152,7 @@ function readstat(filepath;
                 @inbounds hms[i] = hmsi
                 _pushchain!(cols, hmsi, map(x->@inbounds(_columns(x)[i]), tbs))
             end
-            tb = ReadStatTable(cols, names, vlbls, hms, m, cm)
+            return ReadStatTable(cols, names, vlbls, hms, m, cm)
         end
     end
 
