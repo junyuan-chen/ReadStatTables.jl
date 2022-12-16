@@ -14,7 +14,8 @@ and [haven](https://github.com/tidyverse/haven) for R.
 As the Julia counterpart for similar purposes,
 ReadStatTables.jl leverages the state-of-the-art Julia ecosystem
 for usability and performance.
-Its read performance dominates all related packages
+Its read performance, especially when taking advantage of multiple threads,
+surpasses all related packages by a sizable margin
 based on the benchmark results
 [here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks).
 
