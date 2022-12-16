@@ -143,7 +143,8 @@ function readstat(filepath;
                         end
                     end
                     tbs[i] = tasktb
-            end end
+                end
+            end
             cols = ChainedReadStatColumns()
             hms = Vector{Bool}(undef, ncols)
             for i in 1:ncols

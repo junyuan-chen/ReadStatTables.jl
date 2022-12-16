@@ -28,7 +28,7 @@ based on the benchmark results
 ## Features
 
 ReadStatTables.jl provides the following features in addition to
-wrapping the C interface of ReadStat.
+wrapping the C interface of ReadStat:
 
 - Efficient data collection from ReadStat parser to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible column table `ReadStatTable`.
 - Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl).
@@ -47,7 +47,7 @@ ReadStatTables.jl recognizes data files with the following file extensions at th
 
 ReadStatTables.jl can be installed with the Julia package manager
 [Pkg](https://docs.julialang.org/en/v1/stdlib/Pkg/).
-From the Julia REPL, type `]` to enter the Pkg REPL and run
+From the Julia REPL, type `]` to enter the Pkg REPL and run:
 
 ```
 pkg> add ReadStatTables
