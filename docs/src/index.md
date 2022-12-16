@@ -17,7 +17,7 @@ for usability and performance.
 Its read performance, especially when taking advantage of multiple threads,
 surpasses all related packages by a sizable margin
 based on the benchmark results
-[here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks).
+[here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks):
 
 ```@raw html
 <p align="center">
