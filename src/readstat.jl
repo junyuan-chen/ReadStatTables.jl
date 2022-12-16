@@ -79,15 +79,19 @@ function readstat(filepath;
         ntasks = filesize(filepath) < 150_000 ? 1 : nothing
     end
 
+    dtformats = dt_formats[ext]
+    isdta = ext == ".dta"
+
     if ntasks == 1
         tb = _parse_all(filepath, ext, parse_ext, usecols, row_limit, row_offset,
             inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
     else
         m, names, cm, vlbls = _parse_allmeta(filepath, ext, parse_ext, usecols,
             file_encoding, handler_encoding)
-        nrows = row_limit === nothing ? m.row_count : min(m.row_count, row_limit)
-        nrows -= row_offset
+        nrows = m.row_count - row_offset
+        row_limit === nothing || (nrows = min(nrows, row_limit))
         if nrows < 2
+            ntasks = 1
             tb = _parse_all(filepath, ext, parse_ext, usecols, row_limit, row_offset,
                 inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
         else
@@ -97,45 +101,63 @@ function readstat(filepath;
             ntasks = min(nrows, ntasks)
             row_limits = fill(nrows÷ntasks, ntasks)
             row_limits[1] = nrows - (ntasks-1) * row_limits[1]
-            taskcols = map(i->ReadStatColumns(), 1:ntasks)
-            width_offset = Int(m.file_ext == ".dta")
-            @inbounds for i in 1:ntasks
-                for j in 1:ncols
-                    T = jltype(cm.type[j])
-                    width = cm.storage_width[j]
-                    _pushcolumn!(taskcols[i], T, row_limits[i], width, width_offset,
-                        inlinestring_width, pool_width, pool_thres)
-                end
-            end
-            tbs = map(x->ReadStatTable(x, names, vlbls, fill(false, ncols),
-                m, cm), taskcols)
             row_offsets = Vector{Int}(undef, ntasks)
             row_offsets[1] = row_offset
             for i in 2:ntasks
                 row_offsets[i] = row_offset + row_limits[i-1]
             end
-            @sync for i = 1:ntasks
+            width_offset = isdta
+            tbs = Vector{ReadStatTable{ReadStatColumns}}(undef, ntasks)
+            @sync for i in 1:ntasks
                 # Use @wkspawn from WorkerUtilities.jl in the future?
-                Threads.@spawn(_parse_chunk!(tbs[i], filepath, parse_ext, usecols,
-                    row_limits[i], row_offsets[i], pool_thres,
-                    file_encoding, handler_encoding))
+                Threads.@spawn begin
+                    taskcols = ReadStatColumns()
+                    @inbounds for j in 1:ncols
+                        T = jltype(cm.type[j])
+                        width = cm.storage_width[j]
+                        _pushcolumn!(taskcols, T, row_limits[i], width, width_offset,
+                            inlinestring_width, pool_width, pool_thres)
+                    end
+                    tasktb = ReadStatTable(taskcols, names, vlbls, fill(false, ncols), m, cm)
+                    _parse_chunk!(tasktb, filepath, parse_ext, usecols, row_limits[i],
+                        row_offsets[i], pool_thres, file_encoding, handler_encoding)
+                    if convert_datetime
+                        @inbounds for j in 1:ncols
+                            format = cm.format[j]
+                            isdta && (format = first(format, 3))
+                            dtpara = get(dtformats, format, nothing)
+                            if dtpara !== nothing
+                                epoch, delta = dtpara
+                                col0 = taskcols[j]
+                                col = parse_datetime(col0, epoch, delta, _hasmissing(tasktb)[j])
+                                if epoch isa Date
+                                    push!(taskcols.date, col)
+                                    taskcols.index[j] = (8, length(taskcols.date))
+                                    empty!(col0)
+                                elseif epoch isa DateTime
+                                    push!(taskcols.time, col)
+                                    taskcols.index[j] = (9, length(taskcols.time))
+                                    empty!(col0)
+                                end
+                            end
+                        end
+                    end
+                    tbs[i] = tasktb
+                end
             end
             cols = ChainedReadStatColumns()
             hms = Vector{Bool}(undef, ncols)
             for i in 1:ncols
                 hmsi = any(x->@inbounds(_hasmissing(x)[i]), tbs)
                 @inbounds hms[i] = hmsi
-                _pushchain!(cols, hmsi, map(x->@inbounds(x[i]), taskcols))
+                _pushchain!(cols, hmsi, map(x->@inbounds(_columns(x)[i]), tbs))
             end
             tb = ReadStatTable(cols, names, vlbls, hms, m, cm)
         end
     end
 
-    cols = _columns(tb)
-    idate, itime = cols isa ReadStatColumns ? (8, 9) : (13, 14)
-    dtformats = dt_formats[ext]
-    isdta = ext == ".dta"
-    if convert_datetime
+    if ntasks == 1 && convert_datetime
+        cols = _columns(tb)
         @inbounds for i in 1:ncol(tb)
             format = _colmeta(tb, i, :format)
             isdta && (format = first(format, 3))
@@ -146,11 +168,11 @@ function readstat(filepath;
                 col = parse_datetime(col0, epoch, delta, _hasmissing(tb)[i])
                 if epoch isa Date
                     push!(cols.date, col)
-                    cols.index[i] = (idate, length(cols.date))
+                    cols.index[i] = (8, length(cols.date))
                     empty!(col0)
                 elseif epoch isa DateTime
                     push!(cols.time, col)
-                    cols.index[i] = (itime, length(cols.time))
+                    cols.index[i] = (9, length(cols.time))
                     empty!(col0)
                 end
             end

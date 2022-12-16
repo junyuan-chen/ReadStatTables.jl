@@ -181,7 +181,7 @@ end
     end
 
     columns, cols = gettestchainedcolumns(5)
-    N = 21
+    N = 23
     names = [Symbol("n",i) for i in 1:N]
     hms = fill(true, N)
     ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:N], fill("%tf", N),
@@ -190,7 +190,7 @@ end
         fill(READSTAT_ALIGNMENT_UNKNOWN, N)))
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:N
-        if i in 2:2:10 || 11 < i < 14
+        if i in 2:2:14
             @test ismissing(tb[1,i])
         end
         @test tb[i] === columns[i]
@@ -199,7 +199,7 @@ end
     @test typeof(sch).parameters[2] == Tuple{String, Union{Int8, Missing}, Int8,
         Union{Int16, Missing}, Int16, Union{Int32, Missing}, Int32,
         Union{Float32, Missing}, Float32, Union{Float64, Missing}, Float64,
-        Union{Date, Missing}, Union{DateTime, Missing},
+        Union{Date, Missing}, Date, Union{DateTime, Missing}, DateTime,
         String, String3, String7, String15, String31, String63, String127, String255}
 end
 

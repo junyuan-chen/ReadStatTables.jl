@@ -104,6 +104,7 @@ end
            2 │       d     -1.4  1583-01-01"""
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
     d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, ntasks=2, convert_datetime=true)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false,
@@ -121,6 +122,7 @@ end
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
     d = readstat(dta, usecols=[:dtime, :mylabl], ntasks=2, convert_datetime=false,
         file_encoding="UTF-8", handler_encoding="UTF-8")
+    @test d isa ReadStatTable{ChainedReadStatColumns}
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=Set(["dtime", "mylabl"]), row_limit=4)
@@ -135,6 +137,7 @@ end
            4 │ 1583-01-01T00:00:00         Female"""
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
     d = readstat(dta, usecols=Set(["dtime", "mylabl"]), row_limit=4, ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=:myord)

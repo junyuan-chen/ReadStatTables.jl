@@ -290,9 +290,9 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadSta
     elseif m === 12
         return getfield(cols, 12)[n]
     elseif m === 13
-        return _hasmissing(tb)[i] ? getfield(cols, 13)[n] : parent(getfield(cols, 13)[n])
+        return getfield(cols, 13)[n]
     elseif m === 14
-        return _hasmissing(tb)[i] ? getfield(cols, 14)[n] : parent(getfield(cols, 14)[n])
+        return getfield(cols, 14)[n]
     elseif m === 15
         return getfield(cols, 15)[n]
     elseif m === 16
@@ -309,6 +309,10 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadSta
         return getfield(cols, 21)[n]
     elseif m === 22
         return getfield(cols, 22)[n]
+    elseif m === 23
+        return getfield(cols, 23)[n]
+    elseif m === 24
+        return getfield(cols, 24)[n]
     end
 end
 

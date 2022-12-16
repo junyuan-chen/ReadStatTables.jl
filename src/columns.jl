@@ -319,6 +319,8 @@ const _chainedcoltypes = (String => :StringColumn,
     Union{Int32, Missing} => :Int32Column,
     Union{Float32, Missing} => :FloatColumn,
     Union{Float64, Missing} => :DoubleColumn,
+    Union{Date, Missing} => :DateColumn,
+    Union{DateTime, Missing} => :TimeColumn,
     String3 => :Str3Column, String7 => :Str7Column,
     String15 => :Str15Column, String31 => :Str31Column,
     String63 => :Str63Column, String127 => :Str127Column, String255 => :Str255Column)
@@ -346,8 +348,10 @@ struct ChainedReadStatColumns
     floatnm::Vector{ChainedVector{Float32, Vector{Float32}}}
     double::Vector{ChainedDoubleColumn}
     doublenm::Vector{ChainedVector{Float64, Vector{Float64}}}
-    date::Vector{DateColumn}
-    time::Vector{TimeColumn}
+    date::Vector{ChainedDateColumn}
+    datenm::Vector{ChainedVector{Date, Vector{Date}}}
+    time::Vector{ChainedTimeColumn}
+    timenm::Vector{ChainedVector{DateTime, Vector{DateTime}}}
     pooled::Vector{PooledColumnVec}
     str3::Vector{ChainedStr3Column}
     str7::Vector{ChainedStr7Column}
@@ -362,9 +366,11 @@ struct ChainedReadStatColumns
         ChainedInt32Column[], ChainedVector{Int32, Vector{Int32}}[],
         ChainedFloatColumn[], ChainedVector{Float32, Vector{Float32}}[],
         ChainedDoubleColumn[], ChainedVector{Float64, Vector{Float64}}[],
-        DateColumn[], TimeColumn[], PooledColumnVec[],
-        ChainedStr3Column[], ChainedStr7Column[], ChainedStr15Column[], ChainedStr31Column[],
-        ChainedStr63Column[], ChainedStr127Column[], ChainedStr255Column[])
+        ChainedDateColumn[], ChainedVector{Date, Vector{Date}}[],
+        ChainedTimeColumn[], ChainedVector{DateTime, Vector{DateTime}}[],
+        PooledColumnVec[], ChainedStr3Column[], ChainedStr7Column[],
+        ChainedStr15Column[], ChainedStr31Column[], ChainedStr63Column[],
+        ChainedStr127Column[], ChainedStr255Column[])
 end
 
 Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, i::Int)
@@ -411,6 +417,10 @@ Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, i:
         return getfield(cols, 21)[n]
     elseif m === 22
         return getfield(cols, 22)[n]
+    elseif m === 23
+        return getfield(cols, 23)[n]
+    elseif m === 24
+        return getfield(cols, 24)[n]
     end
 end
 
@@ -458,6 +468,10 @@ Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, r,
         return getindex(getfield(cols, 21)[n], r)
     elseif m === 22
         return getindex(getfield(cols, 22)[n], r)
+    elseif m === 23
+        return getindex(getfield(cols, 23)[n], r)
+    elseif m === 24
+        return getindex(getfield(cols, 24)[n], r)
     end
 end
 
@@ -505,6 +519,10 @@ Base.@propagate_inbounds function Base.setindex!(cols::ChainedReadStatColumns, v
         return setindex!(getfield(cols, 21)[n], v, r)
     elseif m === 22
         return setindex!(getfield(cols, 22)[n], v, r)
+    elseif m === 23
+        return setindex!(getfield(cols, 23)[n], v, r)
+    elseif m === 24
+        return setindex!(getfield(cols, 24)[n], v, r)
     end
 end
 
@@ -537,7 +555,7 @@ function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{Int8Col
     end
 end
 
-for (i, etype) in enumerate((:Int16, :Int32, :Float, :Double))
+for (i, etype) in enumerate((:Int16, :Int32, :Float, :Double, :Date, :Time))
     coltype = Symbol(etype, :Column)
     @eval begin
         function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{$coltype})
@@ -591,9 +609,9 @@ function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{PooledC
         i0 += length(refsn)
     end
     pv = PooledArray(RefArray(refs), invpool, pool)
-    tar = getfield(cols, 15)
+    tar = getfield(cols, 17)
     push!(tar, pv)
-    push!(cols.index, (15, length(tar)))
+    push!(cols.index, (17, length(tar)))
     return cols
 end
 
@@ -611,9 +629,9 @@ for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
     @eval begin
         function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{$coltype})
             cv = ChainedVector(vs)
-            tar = getfield(cols, $(15+i))
+            tar = getfield(cols, $(17+i))
             push!(tar, cv)
-            push!(cols.index, ($(15+i), length(tar)))
+            push!(cols.index, ($(17+i), length(tar)))
             return cols
         end
     end
