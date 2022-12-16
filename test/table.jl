@@ -195,6 +195,12 @@ end
         end
         @test tb[i] === columns[i]
     end
+    sch = Tables.schema(tb)
+    @test typeof(sch).parameters[2] == Tuple{String, Union{Int8, Missing}, Int8,
+        Union{Int16, Missing}, Int16, Union{Int32, Missing}, Int32,
+        Union{Float32, Missing}, Float32, Union{Float64, Missing}, Float64,
+        Union{Date, Missing}, Union{DateTime, Missing},
+        String, String3, String7, String15, String31, String63, String127, String255}
 end
 
 @testset "metadata colmetadata" begin

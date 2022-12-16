@@ -85,43 +85,51 @@ function readstat(filepath;
     else
         m, names, cm, vlbls = _parse_allmeta(filepath, ext, parse_ext, usecols,
             file_encoding, handler_encoding)
-        nrows = m.row_count - row_offset
-        ncols = length(cm)
-        ntasks === nothing && (ntasks = _setntasks(nrows * ncols))
-        taskrows = fill(nrows÷ntasks, ntasks)
-        taskrows[1] = nrows - (ntasks-1) * taskrows[1]
-        taskcols = map(i->ReadStatColumns(), 1:ntasks)
-        width_offset = Int(m.file_ext == ".dta")
-        @inbounds for i in 1:ntasks
-            for j in 1:ncols
-                T = jltype(cm.type[j])
-                width = cm.storage_width[j]
-                _pushcolumn!(taskcols[i], T, taskrows[i], width, width_offset,
-                    inlinestring_width, pool_width, pool_thres)
+        nrows = row_limit === nothing ? m.row_count : min(m.row_count, row_limit)
+        nrows -= row_offset
+        if nrows < 2
+            tb = _parse_all(filepath, ext, parse_ext, usecols, row_limit, row_offset,
+                inlinestring_width, pool_width, pool_thres, file_encoding, handler_encoding)
+        else
+            ncols = length(cm)
+            ntasks === nothing && (ntasks = _setntasks(nrows * ncols))
+            # Ensure that each task gets at least one row
+            ntasks = min(nrows, ntasks)
+            taskrows = fill(nrows÷ntasks, ntasks)
+            taskrows[1] = nrows - (ntasks-1) * taskrows[1]
+            taskcols = map(i->ReadStatColumns(), 1:ntasks)
+            width_offset = Int(m.file_ext == ".dta")
+            @inbounds for i in 1:ntasks
+                for j in 1:ncols
+                    T = jltype(cm.type[j])
+                    width = cm.storage_width[j]
+                    _pushcolumn!(taskcols[i], T, taskrows[i], width, width_offset,
+                        inlinestring_width, pool_width, pool_thres)
+                end
             end
-        end
-        tbs = map(x->ReadStatTable(x, names, vlbls, fill(false, ncols),
-            m, cm), taskcols)
-        offsets = Vector{Int}(undef, ntasks)
-        offsets[1] = row_offset
-        for i in 2:ntasks
-            offsets[i] = row_offset + taskrows[i-1]
-        end
-        @sync for i = 1:ntasks
-            # Use @wkspawn from WorkerUtilities.jl in the future?
-            Threads.@spawn begin
-                _parse_chunk!(tbs[i], filepath, parse_ext, usecols, taskrows[i],
-                    offsets[i], pool_thres, file_encoding, handler_encoding)
+            tbs = map(x->ReadStatTable(x, names, vlbls, fill(false, ncols),
+                m, cm), taskcols)
+            offsets = Vector{Int}(undef, ntasks)
+            offsets[1] = row_offset
+            for i in 2:ntasks
+                offsets[i] = row_offset + taskrows[i-1]
             end
+            @sync for i = 1:ntasks
+                # Use @wkspawn from WorkerUtilities.jl in the future?
+                Threads.@spawn begin
+                    _parse_chunk!(tbs[i], filepath, parse_ext, usecols, taskrows[i],
+                        offsets[i], pool_thres, file_encoding, handler_encoding)
+                end
+            end
+            cols = ChainedReadStatColumns()
+            hms = Vector{Bool}(undef, ncols)
+            for i in 1:ncols
+                hmsi = any(x->@inbounds(_hasmissing(x)[i]), tbs)
+                @inbounds hms[i] = hmsi
+                _pushchain!(cols, hmsi, map(x->@inbounds(x[i]), taskcols))
+            end
+            tb = ReadStatTable(cols, names, vlbls, hms, m, cm)
         end
-        cols = ChainedReadStatColumns()
-        hms = Vector{Bool}(undef, ncols)
-        for i in 1:ncols
-            hmsi = any(x->@inbounds(_hasmissing(x)[i]), tbs)
-            @inbounds hms[i] = hmsi
-            _pushchain!(cols, hmsi, map(x->@inbounds(x[i]), taskcols))
-        end
-        tb = ReadStatTable(cols, names, vlbls, hms, m, cm)
     end
 
     cols = _columns(tb)

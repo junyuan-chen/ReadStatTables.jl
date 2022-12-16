@@ -597,6 +597,15 @@ function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{PooledC
     return cols
 end
 
+# vs mixes PooledColumnVec and StringColumn
+function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{AbstractVector{String}})
+    cv = ChainedVector(collect(StringColumn, vs))
+    tar = getfield(cols, 2)
+    push!(tar, cv)
+    push!(cols.index, (2, length(tar)))
+    return cols
+end
+
 for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
     coltype = Symbol(:Str, sz, :Column)
     @eval begin
@@ -607,19 +616,6 @@ for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
             push!(cols.index, ($(15+i), length(tar)))
             return cols
         end
-    end
-end
-
-function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector)
-    coltypes = map(typeof, vs)
-    if PooledColumnVec in coltypes
-        cv = ChainedVector(collect(Vector{StringColumn}, vs))
-        tar = getfield(cols, 2)
-        push!(tar, cv)
-        push!(cols.index, (2, length(tar)))
-        return cols
-    else
-        throw(ArgumentError("unaccepted vs of type $(typeof(vs))"))
     end
 end
 

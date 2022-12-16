@@ -128,7 +128,7 @@ end
             _pushchain!(cols, false, [col1, col2])
         end
     end
-    _pushchain!(cols, false, [columns1[9], columns1[1]])
+    _pushchain!(cols, false, [columns1[7][1], columns1[1]])
     @test size(cols) == (10, 20)
     @test length(cols) == 20
     @test cols.index == [((n, 1) for n in vcat(2:12, 15:22))..., (2, 2)]

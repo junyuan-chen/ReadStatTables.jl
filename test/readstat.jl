@@ -80,28 +80,29 @@ end
     d = readstat(dta, usecols=1:3, row_offset=10)
     @test size(d) == (0, 3)
 
-    d = readstat(dta, usecols=1:3, row_limit=3, row_offset=2, convert_datetime=true)
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-        3×3 ReadStatTable:
-         Row │  mychar    mynum      mydate
-             │ String3  Float64       Date?
-        ─────┼──────────────────────────────
-           1 │       c  -1000.3  1960-01-01
-           2 │       d     -1.4  1583-01-01
-           3 │       e   1000.3     missing"""
-
     d = readstat(dta, ntasks=2)
     @test d isa ReadStatTable{ChainedReadStatColumns}
     @test length(d.mychar.arrays[1]) == 3
 
-    nthd = Threads.nthreads()
-    @test _setntasks(100) == min(2, nthd)
-    @test _setntasks(20_000) == min(max(nthd÷2, 2), nthd)
-    @test _setntasks(1_000_000) == nthd
+    d = readstat(dta, usecols=1:3, row_offset=10, ntasks=2)
+    @test size(d) == (0, 3)
+    @test d isa ReadStatTable{ReadStatColumns}
+
+    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, convert_datetime=true)
+    showstr = """
+        2×3 ReadStatTable:
+         Row │  mychar    mynum      mydate
+             │ String3  Float64        Date
+        ─────┼──────────────────────────────
+           1 │       c  -1000.3  1960-01-01
+           2 │       d     -1.4  1583-01-01"""
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
+    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, ntasks=2, convert_datetime=true)
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false,
         file_encoding="UTF-8", handler_encoding="UTF-8")
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
+    showstr = """
         5×2 ReadStatTable:
          Row │       dtime         mylabl
              │    Float64?  Labeled{Int8}
@@ -111,18 +112,24 @@ end
            3 │         0.0           Male
            4 │ -1.18969e13         Female
            5 │     missing           Male"""
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
+    d = readstat(dta, usecols=[:dtime, :mylabl], ntasks=2, convert_datetime=false,
+        file_encoding="UTF-8", handler_encoding="UTF-8")
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
-    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), convert_datetime=true)
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-        5×2 ReadStatTable:
+    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), row_limit=4)
+    showstr = """
+        4×2 ReadStatTable:
          Row │               dtime         mylabl
-             │           DateTime?  Labeled{Int8}
+             │            DateTime  Labeled{Int8}
         ─────┼────────────────────────────────────
            1 │ 2018-05-06T10:10:10           Male
            2 │ 1880-05-06T10:10:10         Female
            3 │ 1960-01-01T00:00:00           Male
-           4 │ 1583-01-01T00:00:00         Female
-           5 │             missing           Male"""
+           4 │ 1583-01-01T00:00:00         Female"""
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
+    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), row_limit=4, ntasks=2)
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=:myord)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
@@ -136,7 +143,10 @@ end
            4 │            low
            5 │        missing"""
 
-    @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
+    nthd = Threads.nthreads()
+    @test _setntasks(100) == min(2, nthd)
+    @test _setntasks(20_000) == min(max(nthd÷2, 2), nthd)
+    @test _setntasks(1_000_000) == nthd
 
     alltypes = "$(@__DIR__)/../data/alltypes.dta"
     dtype = readstat(alltypes)
@@ -197,6 +207,8 @@ end
     strtype = readstat(stringtypes, ntasks=2, pool_thres=0)
     @test strtype.vstr64 isa ChainedVector{String, Vector{String}}
 
+    @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
+    @test_throws ErrorException readstat(dta, ext=".xpt")
     @test_throws ArgumentError readstat(dta, row_limit=0)
     @test_throws ArgumentError readstat(dta, row_limit=-1)
     @test_throws ArgumentError readstat(dta, row_offset=-1)
@@ -211,6 +223,13 @@ end
 
     d = readstat(dta)
     m1, names, cm, vlbls = readstatallmeta(dta)
+    @test m1 == m
+    @test names == columnnames(d)
+    @test cm == getfield(d, :colmeta)
+    @test vlbls == getvaluelabels(d)
+
+    d = readstat(dta, usecols=[:dtime, :mylabl])
+    m1, names, cm, vlbls = readstatallmeta(dta, usecols=[:dtime, :mylabl])
     @test m1 == m
     @test names == columnnames(d)
     @test cm == getfield(d, :colmeta)

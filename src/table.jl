@@ -290,9 +290,9 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadSta
     elseif m === 12
         return getfield(cols, 12)[n]
     elseif m === 13
-        return getfield(cols, 13)[n]
+        return _hasmissing(tb)[i] ? getfield(cols, 13)[n] : parent(getfield(cols, 13)[n])
     elseif m === 14
-        return getfield(cols, 14)[n]
+        return _hasmissing(tb)[i] ? getfield(cols, 14)[n] : parent(getfield(cols, 14)[n])
     elseif m === 15
         return getfield(cols, 15)[n]
     elseif m === 16
@@ -339,7 +339,7 @@ Base.@propagate_inbounds Base.getindex(tb::ReadStatTable, r, c) =
 Base.@propagate_inbounds Base.setindex!(tb::ReadStatTable, val, r, c) =
     setindex!(_columns(tb), val, r, Tables.columnindex(tb, c))
 
-function _gettype(tb::ReadStatTable{ReadStatColumns}, i)
+function _geteltype(tb::ReadStatTable{ReadStatColumns}, i)
     T = eltype(Tables.getcolumn(tb, i))
     if T === Union{Int8, Missing}
         _hasmissing(tb)[i] || return Int8
@@ -349,17 +349,17 @@ function _gettype(tb::ReadStatTable{ReadStatColumns}, i)
     return T
 end
 
-_gettype(tb::ReadStatTable{ChainedReadStatColumns}, i) =
+_geteltype(tb::ReadStatTable{ChainedReadStatColumns}, i) =
     eltype(Tables.getcolumn(tb, i))
 
 Tables.schema(tb::ReadStatTable) =
-    Tables.Schema{(_names(tb)...,), Tuple{ntuple(i->_gettype(tb,i), length(tb))...}}()
+    Tables.Schema{(_names(tb)...,), Tuple{ntuple(i->_geteltype(tb,i), length(tb))...}}()
 
 Tables.columnindex(::ReadStatTable, i::Int) = i
 Tables.columnindex(tb::ReadStatTable, n::Symbol) = _lookup(tb)[n]
 Tables.columnindex(tb::ReadStatTable, n::String) = Tables.columnindex(tb, Symbol(n))
 Tables.columntype(tb::ReadStatTable, n::Symbol) =
-    (i = get(_lookup(tb), n, 0); i === 0 ? Union{} : _gettype(tb, i))
+    (i = get(_lookup(tb), n, 0); i === 0 ? Union{} : _geteltype(tb, i))
 
 ncol(tb::ReadStatTable) = length(_names(tb))
 nrow(tb::ReadStatTable) = ncol(tb) > 0 ? length(_columns(tb)[1])::Int : 0
