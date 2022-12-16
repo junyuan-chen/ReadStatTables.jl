@@ -7,7 +7,7 @@ using InlineStrings
 using PooledArrays: PooledArray, PooledVector, RefArray
 using PrettyTables: pretty_table
 using ReadStat_jll
-using SentinelArrays: SentinelVector
+using SentinelArrays: SentinelVector, ChainedVector
 using StructArrays: StructVector
 using Tables
 
@@ -32,6 +32,7 @@ export LabeledValue,
        valuelabels,
 
        ReadStatColumns,
+       ChainedReadStatColumns,
 
        AbstractMetaDict,
        ReadStatMeta,
@@ -44,7 +45,8 @@ export LabeledValue,
        colmetavalues,
 
        readstat,
-       readstatmeta
+       readstatmeta,
+       readstatallmeta
 
 include("wrappers.jl")
 include("LabeledArrays.jl")

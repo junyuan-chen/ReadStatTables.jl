@@ -8,7 +8,8 @@ const FloatColumn = SentinelVector{Float32, Float32, Missing, Vector{Float32}}
 const DoubleColumn = SentinelVector{Float64, Float64, Missing, Vector{Float64}}
 const DateColumn = SentinelVector{Date, Date, Missing, Vector{Date}}
 const TimeColumn = SentinelVector{DateTime, DateTime, Missing, Vector{DateTime}}
-const PooledColumn = Tuple{PooledVector{String, UInt16, Vector{UInt16}}, Int}
+const PooledColumnVec = PooledVector{String, UInt16, Vector{UInt16}}
+const PooledColumn = Tuple{PooledColumnVec, Int}
 for sz in (3, 7, 15, 31, 63, 127, 255)
     colname = Symbol(:Str, sz, :Column)
     strtype = Symbol(:String, sz)
@@ -308,13 +309,343 @@ end
 
 Base.push!(cols::ReadStatColumns, vs...) = (foreach(v->push!(cols, v), vs); cols)
 
-Base.iterate(cols::ReadStatColumns, state=1) =
-    state > length(cols) ? nothing : (cols[state], state+1)
-
-ncol(cols::ReadStatColumns) = length(cols.index)
-nrow(cols::ReadStatColumns) = ncol(cols) > 0 ? length(cols[1])::Int : 0
-Base.size(cols::ReadStatColumns) = (nrow(cols), ncol(cols))
-Base.length(cols::ReadStatColumns) = ncol(cols)
-
 Base.show(io::IO, cols::ReadStatColumns) =
     print(io, nrow(cols), '×', ncol(cols), " ReadStatColumns")
+
+# Column types that will be directly chained together across tasks
+const _chainedcoltypes = (String => :StringColumn,
+    Union{Int8, Missing} => :Int8Column,
+    Union{Int16, Missing} => :Int16Column,
+    Union{Int32, Missing} => :Int32Column,
+    Union{Float32, Missing} => :FloatColumn,
+    Union{Float64, Missing} => :DoubleColumn,
+    Union{Date, Missing} => :DateColumn,
+    Union{DateTime, Missing} => :TimeColumn,
+    String3 => :Str3Column, String7 => :Str7Column,
+    String15 => :Str15Column, String31 => :Str31Column,
+    String63 => :Str63Column, String127 => :Str127Column, String255 => :Str255Column)
+
+for (etype, coltype) in _chainedcoltypes
+    colname = Symbol(:Chained, coltype)
+    @eval const $colname = ChainedVector{$etype, $coltype}
+end
+
+"""
+    ChainedReadStatColumns
+
+A set of data columns obtained by lazily appending multiple `ReadStatColumns`.
+"""
+struct ChainedReadStatColumns
+    index::Vector{Tuple{Int,Int}}
+    string::Vector{ChainedStringColumn}
+    int8::Vector{ChainedInt8Column}
+    int8nm::Vector{Vector{Int8}}
+    int16::Vector{ChainedInt16Column}
+    int16nm::Vector{ChainedVector{Int16, Vector{Int16}}}
+    int32::Vector{ChainedInt32Column}
+    int32nm::Vector{ChainedVector{Int32, Vector{Int32}}}
+    float::Vector{ChainedFloatColumn}
+    floatnm::Vector{ChainedVector{Float32, Vector{Float32}}}
+    double::Vector{ChainedDoubleColumn}
+    doublenm::Vector{ChainedVector{Float64, Vector{Float64}}}
+    date::Vector{ChainedDateColumn}
+    datenm::Vector{ChainedVector{Date, Vector{Date}}}
+    time::Vector{ChainedTimeColumn}
+    timenm::Vector{ChainedVector{DateTime, Vector{DateTime}}}
+    pooled::Vector{PooledColumnVec}
+    str3::Vector{ChainedStr3Column}
+    str7::Vector{ChainedStr7Column}
+    str15::Vector{ChainedStr15Column}
+    str31::Vector{ChainedStr31Column}
+    str63::Vector{ChainedStr63Column}
+    str127::Vector{ChainedStr127Column}
+    str255::Vector{ChainedStr255Column}
+    ChainedReadStatColumns() = new(Tuple{Int,Int}[], ChainedStringColumn[],
+        ChainedInt8Column[], Vector{Int8}[],
+        ChainedInt16Column[], ChainedVector{Int16, Vector{Int16}}[],
+        ChainedInt32Column[], ChainedVector{Int32, Vector{Int32}}[],
+        ChainedFloatColumn[], ChainedVector{Float32, Vector{Float32}}[],
+        ChainedDoubleColumn[], ChainedVector{Float64, Vector{Float64}}[],
+        ChainedDateColumn[], ChainedVector{Date, Vector{Date}}[],
+        ChainedTimeColumn[], ChainedVector{DateTime, Vector{DateTime}}[],
+        PooledColumnVec[], ChainedStr3Column[], ChainedStr7Column[],
+        ChainedStr15Column[], ChainedStr31Column[], ChainedStr63Column[],
+        ChainedStr127Column[], ChainedStr255Column[])
+end
+
+Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, i::Int)
+    m, n = getfield(cols, 1)[i]
+    if m === 2
+        return getfield(cols, 2)[n]
+    elseif m === 3
+        return getfield(cols, 3)[n]
+    elseif m === 4
+        return getfield(cols, 4)[n]
+    elseif m === 5
+        return getfield(cols, 5)[n]
+    elseif m === 6
+        return getfield(cols, 6)[n]
+    elseif m === 7
+        return getfield(cols, 7)[n]
+    elseif m === 8
+        return getfield(cols, 8)[n]
+    elseif m === 9
+        return getfield(cols, 9)[n]
+    elseif m === 10
+        return getfield(cols, 10)[n]
+    elseif m === 11
+        return getfield(cols, 11)[n]
+    elseif m === 12
+        return getfield(cols, 12)[n]
+    elseif m === 13
+        return getfield(cols, 13)[n]
+    elseif m === 14
+        return getfield(cols, 14)[n]
+    elseif m === 15
+        return getfield(cols, 15)[n]
+    elseif m === 16
+        return getfield(cols, 16)[n]
+    elseif m === 17
+        return getfield(cols, 17)[n]
+    elseif m === 18
+        return getfield(cols, 18)[n]
+    elseif m === 19
+        return getfield(cols, 19)[n]
+    elseif m === 20
+        return getfield(cols, 20)[n]
+    elseif m === 21
+        return getfield(cols, 21)[n]
+    elseif m === 22
+        return getfield(cols, 22)[n]
+    elseif m === 23
+        return getfield(cols, 23)[n]
+    elseif m === 24
+        return getfield(cols, 24)[n]
+    end
+end
+
+Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, r, c::Int)
+    m, n = getfield(cols, 1)[c]
+    if m === 2
+        return getindex(getfield(cols, 2)[n], r)
+    elseif m === 3
+        return getindex(getfield(cols, 3)[n], r)
+    elseif m === 4
+        return getindex(getfield(cols, 4)[n], r)
+    elseif m === 5
+        return getindex(getfield(cols, 5)[n], r)
+    elseif m === 6
+        return getindex(getfield(cols, 6)[n], r)
+    elseif m === 7
+        return getindex(getfield(cols, 7)[n], r)
+    elseif m === 8
+        return getindex(getfield(cols, 8)[n], r)
+    elseif m === 9
+        return getindex(getfield(cols, 9)[n], r)
+    elseif m === 10
+        return getindex(getfield(cols, 10)[n], r)
+    elseif m === 11
+        return getindex(getfield(cols, 11)[n], r)
+    elseif m === 12
+        return getindex(getfield(cols, 12)[n], r)
+    elseif m === 13
+        return getindex(getfield(cols, 13)[n], r)
+    elseif m === 14
+        return getindex(getfield(cols, 14)[n], r)
+    elseif m === 15
+        return getindex(getfield(cols, 15)[n], r)
+    elseif m === 16
+        return getindex(getfield(cols, 16)[n], r)
+    elseif m === 17
+        return getindex(getfield(cols, 17)[n], r)
+    elseif m === 18
+        return getindex(getfield(cols, 18)[n], r)
+    elseif m === 19
+        return getindex(getfield(cols, 19)[n], r)
+    elseif m === 20
+        return getindex(getfield(cols, 20)[n], r)
+    elseif m === 21
+        return getindex(getfield(cols, 21)[n], r)
+    elseif m === 22
+        return getindex(getfield(cols, 22)[n], r)
+    elseif m === 23
+        return getindex(getfield(cols, 23)[n], r)
+    elseif m === 24
+        return getindex(getfield(cols, 24)[n], r)
+    end
+end
+
+Base.@propagate_inbounds function Base.setindex!(cols::ChainedReadStatColumns, v, r::Int, c::Int)
+    m, n = getfield(cols, 1)[c]
+    if m === 2
+        return setindex!(getfield(cols, 2)[n], v, r)
+    elseif m === 3
+        return setindex!(getfield(cols, 3)[n], v, r)
+    elseif m === 4
+        return setindex!(getfield(cols, 4)[n], v, r)
+    elseif m === 5
+        return setindex!(getfield(cols, 5)[n], v, r)
+    elseif m === 6
+        return setindex!(getfield(cols, 6)[n], v, r)
+    elseif m === 7
+        return setindex!(getfield(cols, 7)[n], v, r)
+    elseif m === 8
+        return setindex!(getfield(cols, 8)[n], v, r)
+    elseif m === 9
+        return setindex!(getfield(cols, 9)[n], v, r)
+    elseif m === 10
+        return setindex!(getfield(cols, 10)[n], v, r)
+    elseif m === 11
+        return setindex!(getfield(cols, 11)[n], v, r)
+    elseif m === 12
+        return setindex!(getfield(cols, 12)[n], v, r)
+    elseif m === 13
+        return setindex!(getfield(cols, 13)[n], v, r)
+    elseif m === 14
+        return setindex!(getfield(cols, 14)[n], v, r)
+    elseif m === 15
+        return setindex!(getfield(cols, 15)[n], v, r)
+    elseif m === 16
+        return setindex!(getfield(cols, 16)[n], v, r)
+    elseif m === 17
+        return setindex!(getfield(cols, 17)[n], v, r)
+    elseif m === 18
+        return setindex!(getfield(cols, 18)[n], v, r)
+    elseif m === 19
+        return setindex!(getfield(cols, 19)[n], v, r)
+    elseif m === 20
+        return setindex!(getfield(cols, 20)[n], v, r)
+    elseif m === 21
+        return setindex!(getfield(cols, 21)[n], v, r)
+    elseif m === 22
+        return setindex!(getfield(cols, 22)[n], v, r)
+    elseif m === 23
+        return setindex!(getfield(cols, 23)[n], v, r)
+    elseif m === 24
+        return setindex!(getfield(cols, 24)[n], v, r)
+    end
+end
+
+function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{StringColumn})
+    cv = ChainedVector(vs)
+    tar = getfield(cols, 2)
+    push!(tar, cv)
+    push!(cols.index, (2, length(tar)))
+    return cols
+end
+
+function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{Int8Column})
+    if hms
+        cv = ChainedVector(vs)
+        tar = getfield(cols, 3)
+        push!(tar, cv)
+        push!(cols.index, (3, length(tar)))
+        return cols
+    else
+        cv = Vector{Int8}(undef, sum(length, vs))
+        i1 = 1
+        for v in vs
+            copyto!(cv, i1, v)
+            i1 += length(v)
+        end
+        tar = getfield(cols, 4)
+        push!(tar, cv)
+        push!(cols.index, (4, length(tar)))
+        return cols
+    end
+end
+
+for (i, etype) in enumerate((:Int16, :Int32, :Float, :Double, :Date, :Time))
+    coltype = Symbol(etype, :Column)
+    @eval begin
+        function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{$coltype})
+            if hms
+                cv = ChainedVector(vs)
+                tar = getfield(cols, $(3+2*i))
+                push!(tar, cv)
+                push!(cols.index, ($(3+2*i), length(tar)))
+                return cols
+            else
+                cv = ChainedVector(map(parent, vs))
+                tar = getfield(cols, $(4+2*i))
+                push!(tar, cv)
+                push!(cols.index, ($(4+2*i), length(tar)))
+                return cols
+            end
+        end
+    end
+end
+
+function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{PooledColumnVec})
+    v1 = vs[1]
+    refs = v1.refs
+    pool = v1.pool
+    invpool = v1.invpool
+    i0 = length(refs)
+    resize!(refs, sum(length, vs))
+    refmap = Dict{UInt16, UInt16}()
+    nlbls = UInt16(length(pool))
+    z = zero(UInt16)
+    o = one(UInt16)
+    @inbounds for n in 2:length(vs)
+        vn = vs[n]
+        lbln = o
+        for x in vn.pool
+            lbl = get(invpool, x, z)
+            if iszero(lbl)
+                nlbls += o
+                invpool[x] = nlbls
+                refmap[lbln] = nlbls
+                push!(pool, x)
+            else
+                refmap[lbln] = lbl
+            end
+            lbln += o
+        end
+        refsn = vn.refs
+        for i in 1:length(vn)
+            refs[i0+i] = refmap[refsn[i]]
+        end
+        i0 += length(refsn)
+    end
+    pv = PooledArray(RefArray(refs), invpool, pool)
+    tar = getfield(cols, 17)
+    push!(tar, pv)
+    push!(cols.index, (17, length(tar)))
+    return cols
+end
+
+# vs mixes PooledColumnVec and StringColumn
+function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{AbstractVector{String}})
+    cv = ChainedVector(collect(StringColumn, vs))
+    tar = getfield(cols, 2)
+    push!(tar, cv)
+    push!(cols.index, (2, length(tar)))
+    return cols
+end
+
+for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
+    coltype = Symbol(:Str, sz, :Column)
+    @eval begin
+        function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{$coltype})
+            cv = ChainedVector(vs)
+            tar = getfield(cols, $(17+i))
+            push!(tar, cv)
+            push!(cols.index, ($(17+i), length(tar)))
+            return cols
+        end
+    end
+end
+
+const ColumnsOrChained = Union{ReadStatColumns, ChainedReadStatColumns}
+
+Base.iterate(cols::ColumnsOrChained, state=1) =
+    state > length(cols) ? nothing : (cols[state], state+1)
+
+ncol(cols::ColumnsOrChained) = length(cols.index)
+nrow(cols::ColumnsOrChained) = ncol(cols) > 0 ? length(cols[1])::Int : 0
+Base.size(cols::ColumnsOrChained) = (nrow(cols), ncol(cols))
+Base.length(cols::ColumnsOrChained) = ncol(cols)
+
+Base.show(io::IO, cols::ChainedReadStatColumns) =
+    print(io, nrow(cols), '×', ncol(cols), " ChainedReadStatColumns")

@@ -1,7 +1,7 @@
 # Value Labels
 
 Value labels collected from the data files are incorporated into the associated data columns
-via a customized array type [`LabeledArray`](@ref).
+via a custom array type [`LabeledArray`](@ref).
 
 ## LabeledValue and LabeledArray
 
@@ -39,7 +39,7 @@ is not equivalent to that of an array type designed for categorical data
 [CategoricalArrays.jl](https://github.com/JuliaData/CategoricalArrays.jl)).
 They are not complete substitutes for each other.
 
-More details are below.
+More details are below:
 
 ```@docs
 LabeledValue

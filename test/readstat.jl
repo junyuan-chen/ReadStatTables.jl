@@ -8,6 +8,7 @@ end
 @testset "readstat dta" begin
     dta = "$(@__DIR__)/../data/sample.dta"
     d = readstat(dta)
+    @test d isa ReadStatTable{ReadStatColumns}
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
         5×7 ReadStatTable:
          Row │  mychar    mynum      mydate                dtime         mylabl           myord               mytime
@@ -79,19 +80,36 @@ end
     d = readstat(dta, usecols=1:3, row_offset=10)
     @test size(d) == (0, 3)
 
-    d = readstat(dta, usecols=1:3, row_limit=3, row_offset=2, convert_datetime=true)
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-        3×3 ReadStatTable:
+    d = readstat(dta, ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
+    @test length(d.mychar.arrays[1]) == 3
+
+    d = readstat(dta, usecols=Int[], ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
+    @test sprint(show, d) == "0×0 ReadStatTable"
+    @test isempty(colmetadata(d))
+    @test length(getvaluelabels(d)) == 2
+
+    d = readstat(dta, usecols=1:3, row_offset=10, ntasks=2)
+    @test size(d) == (0, 3)
+    @test d isa ReadStatTable{ReadStatColumns}
+
+    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, convert_datetime=true)
+    showstr = """
+        2×3 ReadStatTable:
          Row │  mychar    mynum      mydate
-             │ String3  Float64       Date?
+             │ String3  Float64        Date
         ─────┼──────────────────────────────
            1 │       c  -1000.3  1960-01-01
-           2 │       d     -1.4  1583-01-01
-           3 │       e   1000.3     missing"""
+           2 │       d     -1.4  1583-01-01"""
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
+    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, ntasks=2, convert_datetime=true)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false,
         file_encoding="UTF-8", handler_encoding="UTF-8")
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
+    showstr = """
         5×2 ReadStatTable:
          Row │       dtime         mylabl
              │    Float64?  Labeled{Int8}
@@ -101,18 +119,26 @@ end
            3 │         0.0           Male
            4 │ -1.18969e13         Female
            5 │     missing           Male"""
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
+    d = readstat(dta, usecols=[:dtime, :mylabl], ntasks=2, convert_datetime=false,
+        file_encoding="UTF-8", handler_encoding="UTF-8")
+    @test d isa ReadStatTable{ChainedReadStatColumns}
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
-    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), convert_datetime=true)
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-        5×2 ReadStatTable:
+    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), row_limit=4)
+    showstr = """
+        4×2 ReadStatTable:
          Row │               dtime         mylabl
-             │           DateTime?  Labeled{Int8}
+             │            DateTime  Labeled{Int8}
         ─────┼────────────────────────────────────
            1 │ 2018-05-06T10:10:10           Male
            2 │ 1880-05-06T10:10:10         Female
            3 │ 1960-01-01T00:00:00           Male
-           4 │ 1583-01-01T00:00:00         Female
-           5 │             missing           Male"""
+           4 │ 1583-01-01T00:00:00         Female"""
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
+    d = readstat(dta, usecols=Set(["dtime", "mylabl"]), row_limit=4, ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
     d = readstat(dta, usecols=:myord)
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
@@ -126,7 +152,10 @@ end
            4 │            low
            5 │        missing"""
 
-    @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
+    nthd = Threads.nthreads()
+    @test _setntasks(100) == min(2, nthd)
+    @test _setntasks(20_000) == min(max(nthd÷2, 2), nthd)
+    @test _setntasks(1_000_000) == nthd
 
     alltypes = "$(@__DIR__)/../data/alltypes.dta"
     dtype = readstat(alltypes)
@@ -179,12 +208,41 @@ end
     strtype = readstat(stringtypes, pool_thres=0)
     @test strtype.vstr64 isa Array
 
+    strtype = readstat(stringtypes, ntasks=2)
+    @test strtype.vstr64 isa PooledArray
+    strtype = readstat(stringtypes, ntasks=2, pool_width=256)
+    @test strtype.vstr255 isa ChainedVector{String, Vector{String}}
+    @test strtype.vstr256 isa PooledArray
+    strtype = readstat(stringtypes, ntasks=2, pool_thres=0)
+    @test strtype.vstr64 isa ChainedVector{String, Vector{String}}
+
+    @test_throws ArgumentError readstat("$(@__DIR__)/../data/README.md")
+    @test_throws ErrorException readstat(dta, ext=".xpt")
+    @test_throws ArgumentError readstat(dta, row_limit=0)
+    @test_throws ArgumentError readstat(dta, row_limit=-1)
+    @test_throws ArgumentError readstat(dta, row_offset=-1)
+    @test_throws ArgumentError readstat(dta, pool_thres=typemax(UInt16)+1)
+
     m = readstatmeta(dta)
     @test m.row_count == 5
     @test m.var_count == 7
     @test m.file_format_version == 118
     @test m.file_label == "A test file"
     @test m.file_ext == ".dta"
+
+    d = readstat(dta)
+    m1, names, cm, vlbls = readstatallmeta(dta)
+    @test m1 == m
+    @test names == columnnames(d)
+    @test cm == getfield(d, :colmeta)
+    @test vlbls == getvaluelabels(d)
+
+    d = readstat(dta, usecols=[:dtime, :mylabl])
+    m1, names, cm, vlbls = readstatallmeta(dta, usecols=[:dtime, :mylabl])
+    @test m1 == m
+    @test names == columnnames(d)
+    @test cm == getfield(d, :colmeta)
+    @test vlbls == getvaluelabels(d)
 end
 
 @testset "readstat sav" begin
@@ -200,6 +258,9 @@ end
            3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
            4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
            5 │      e   1000.3              missing              missing              Male               low              missing"""
+
+    d = readstat(sav, ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
 
     m = metadata(d)
     @test sprint(show, MIME("text/plain"), m)[1:83] == """
@@ -240,6 +301,9 @@ end
            4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
            5 │      e   1000.3              missing              missing              Male               low              missing"""
 
+    d = readstat(por, ntasks=2)
+    @test d isa ReadStatTable{ReadStatColumns}
+
     m = metadata(d)
     @test sprint(show, MIME("text/plain"), m)[1:84] == """
         ReadStatMeta:
@@ -278,6 +342,9 @@ end
            3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
            4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
            5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
+
+    d = readstat(sas7, ntasks=2)
+    @test d isa ReadStatTable{ChainedReadStatColumns}
 
     m = metadata(d)
     @test sprint(show, MIME("text/plain"), m)[1:83] == """
@@ -320,6 +387,9 @@ end
            3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
            4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
            5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
+
+    d = readstat(xpt, ntasks=2)
+    @test d isa ReadStatTable{ReadStatColumns}
 
     m = metadata(d)
     @test m.table_name == "SAMPLE"

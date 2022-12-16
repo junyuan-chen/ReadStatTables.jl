@@ -149,6 +149,11 @@ File-level metadata can be obtained without reading the entire data file:
 readstatmeta
 ```
 
+To additionally collect variable-level metadata and all value labels:
+```@docs
+readstatallmeta
+```
+
 [^1]: The printed output is generated with [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl).
 
 [^2]: The time types `Date` and `DateTime` are from the [Dates](https://docs.julialang.org/en/v1/stdlib/Dates/) module of Julia.
