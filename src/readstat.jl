@@ -35,7 +35,7 @@ from a supported data file located at `filepath`.
 - `usecols::Union{ColumnSelector, Nothing} = nothing`: only collect data from the specified columns (variables); collect all columns if `usecols=nothing`.
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
-- `ntasks::Union{Integer, Nothing} = nothing`: number of tasks spawned to read the data file in concurrent chunks with multiple threads; with `ntasks` being `nothing` or smaller than 1, select a default value based on the size of data file and the number of threads available (`Threads.nthreads()`); not applicable to `.xpt` and `.por` files where row count is unknown from metadata.
+- `ntasks::Union{Integer, Nothing} = nothing`: number of tasks spawned to read data file in concurrent chunks with multiple threads; with `ntasks` being `nothing` or smaller than 1, select a default value based on the size of data file and the number of threads available (`Threads.nthreads()`); not applicable to `.xpt` and `.por` files where row count is unknown from metadata.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
 - `inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32`: use a fixed-width string type that can be stored inline for any string variable with width below `inlinestring_width` and `pool_width`; a non-positive value avoids using any inline string type; not recommended for SPSS files.
 - `pool_width::Integer = 64`: only attempt to use `PooledArray` for string variables with width of at least 64.

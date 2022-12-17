@@ -221,22 +221,22 @@ end
         [READSTAT_ALIGNMENT_UNKNOWN,READSTAT_ALIGNMENT_UNKNOWN]))
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
 
-    @test isempty(metastyle(tb))
-    @test metastyle(tb, :file_label) == :default
-    @test metastyle(tb, "file_label") == :default
+    @test length(metastyle(tb)) == 4
+    @test metastyle(tb, :file_label) == :note
+    @test metastyle(tb, "file_label") == :note
 
     @test metadata(tb, "file_label") == "flabel"
     @test metadata(tb, :file_label) == "flabel"
-    @test metadata(tb, "file_label", style=true) == ("flabel", :default)
-
-    metastyle!(tb, "file_label", :note)
-    @test metastyle(tb, :file_label) == :note
     @test metadata(tb, "file_label", style=true) == ("flabel", :note)
+
+    metastyle!(tb, "file_label", :default)
+    @test metastyle(tb, :file_label) == :default
+    @test metadata(tb, "file_label", style=true) == ("flabel", :default)
 
     @test metadata(tb) === m
     v = metadata(tb, style=true)
     @test v isa AbstractDict
-    @test v["file_label"] == ("flabel", :note)
+    @test v["file_label"] == ("flabel", :default)
     @test length(v) == length(m)
     @test copy(v) isa Dict{String, Any}
 
@@ -244,22 +244,22 @@ end
 
     metadata!(tb, "file_label", "filelab")
     @test m.file_label == "filelab"
-    @test metastyle(tb, :file_label) == :note
-    metadata!(tb, "file_label", "flabel", style=:default)
-    @test m.file_label == "flabel"
     @test metastyle(tb, :file_label) == :default
+    metadata!(tb, "file_label", "flabel", style=:note)
+    @test m.file_label == "flabel"
+    @test metastyle(tb, :file_label) == :note
 
     @test colmetadata(tb, :c1, "label") == "v1"
-    @test colmetadata(tb, :c1, "label", style=true) == ("v1", :default)
+    @test colmetadata(tb, :c1, "label", style=true) == ("v1", :note)
     @test colmetadata(tb, :c1) == ms[1]
 
-    metastyle!(tb, "label", :note)
-    @test metastyle(tb, :label) == :note
-    @test colmetadata(tb, :c1, "label", style=true) == ("v1", :note)
+    metastyle!(tb, "label", :default)
+    @test metastyle(tb, :label) == :default
+    @test colmetadata(tb, :c1, "label", style=true) == ("v1", :default)
 
     v = colmetadata(tb, :c1, style=true)
     @test v isa AbstractDict
-    @test v["label"] == ("v1", :note)
+    @test v["label"] == ("v1", :default)
     @test length(v) == length(ms[1])
 
     d = colmetadata(tb)
@@ -286,10 +286,10 @@ end
 
     colmetadata!(tb, :c1, "label", "lab")
     @test ms.label[1] == "lab"
-    @test metastyle(tb, :label) == :note
-    colmetadata!(tb, :c1, "label", "v1", style=:default)
-    @test ms.label[1] == "v1"
     @test metastyle(tb, :label) == :default
+    colmetadata!(tb, :c1, "label", "v1", style=:note)
+    @test ms.label[1] == "v1"
+    @test metastyle(tb, :label) == :note
 
     lbls = colmetavalues(tb, "label")
     @test lbls == ["v1","v2"]

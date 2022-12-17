@@ -155,6 +155,9 @@ const ColMetaVec = StructVector{ReadStatColMeta, NamedTuple{(:label, :format, :t
     Vector{UInt64}, Vector{Int32}, Vector{readstat_measure_t},
     Vector{readstat_alignment_t}}}, Int64}
 
+_default_metastyles() =
+    Dict{Symbol, Symbol}([:file_label, :notes, :label, :vallabel].=>:note)
+
 """
     ReadStatTable{Cols} <: Tables.AbstractColumns
 
@@ -184,7 +187,7 @@ struct ReadStatTable{Cols} <: Tables.AbstractColumns
         meta = ReadStatMeta()
         colmeta = StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
             Symbol[], Csize_t[], Cint[], readstat_measure_t[], readstat_alignment_t[]))
-        styles = Dict{Symbol, Symbol}()
+        styles = _default_metastyles()
         return new{ReadStatColumns}(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
     end
     function ReadStatTable(
@@ -192,7 +195,7 @@ struct ReadStatTable{Cols} <: Tables.AbstractColumns
             names::Vector{Symbol},
             vallabels::Dict{Symbol, Dict}, hasmissing::Vector{Bool},
             meta::ReadStatMeta, colmeta::ColMetaVec,
-            styles::Dict{Symbol, Symbol}=Dict{Symbol, Symbol}())
+            styles::Dict{Symbol, Symbol} = _default_metastyles())
         lookup = Dict{Symbol, Int}(n=>i for (i, n) in enumerate(names))
         N = length(columns)
         length(lookup) == N ||
@@ -408,7 +411,8 @@ colmetadatasupport(::Type{<:ReadStatTable}) = (read=true, write=true)
 
 Return the specified style(s) of all metadata for table `tb`.
 If a metadata `key` is specified, only the style for the associated metadata are returned.
-By default, the style for all metadata is `:default`.
+By default, metadata on labels and notes have the `:note` style;
+all other metadata have the `:default` style.
 
 The style of metadata is only determined by `key` and hence
 is not distinguished across different columns.

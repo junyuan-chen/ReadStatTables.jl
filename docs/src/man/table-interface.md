@@ -60,7 +60,7 @@ end
 
 In addition to retrieving the data columns,
 it is possible to directly retrieve and modify individual data values
-via `getindex` and `setindex!`.
+via `getindex` and `setindex!`:
 
 ```@repl table
 tb[1,1]

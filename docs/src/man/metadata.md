@@ -43,7 +43,7 @@ Metadata contained in a `ReadStatMeta` can be modified,
 optionally with a metadata style set at the same time:
 
 ```@repl meta
-metadata!(tb, "file_label", "A file label", style=:note)
+metadata!(tb, "file_label", "A file label", style=:default)
 ```
 
 Since `ReadStatMeta` has a dictionary-like interface,
@@ -88,7 +88,7 @@ Metadata contained in a `ReadStatColMeta` can be modified,
 optionally with a metadata style set at the same time:
 
 ```@repl meta
-colmetadata!(tb, :mylabl, "label", "A variable label", style=:note)
+colmetadata!(tb, :mylabl, "label", "A variable label", style=:default)
 ```
 
 A `ReadStatColMeta` also has a dictionary-like interface:
@@ -139,9 +139,11 @@ Packages that implement metadata-related methods compatible with
 [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
 are able to recognize the metadata contained in `ReadStatTable`.
 
-By default, all metadata have the `:default` style.
-The user-specified metadata styles
-are recorded in a `Dict` based on the keys of metadata:
+By default, metadata on labels and notes have the `:note` style;
+all other metadata have the `:default` style.
+Keys for metadata with user-specified styles,
+along with those that have the `:note` style by default,
+are recorded in a dictionary:
 
 ```@repl meta
 metastyle(tb)
@@ -160,7 +162,7 @@ metadata associated with the same key always have the same style
 and hence are not distinguished across different columns.
 
 ```@repl meta
-metastyle!(tb, "label", :note)
+metastyle!(tb, "label", :default)
 colmetadata(tb, :mychar, "label", style=true)
 colmetadata(tb, :mynum, "label", style=true)
 ```
