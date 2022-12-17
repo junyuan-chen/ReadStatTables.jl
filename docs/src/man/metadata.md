@@ -141,9 +141,9 @@ are able to recognize the metadata contained in `ReadStatTable`.
 
 By default, metadata on labels and notes have the `:note` style;
 all other metadata have the `:default` style.
-Key-value pairs of user-specified metadata styles,
+Keys for metadata with user-specified styles,
 along with those that have the `:note` style by default,
-are recorded in a `Dict` based on the keys of metadata:
+are recorded in a dictionary:
 
 ```@repl meta
 metastyle(tb)
