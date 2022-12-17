@@ -32,17 +32,45 @@ for parsing the data files.
 The same C library is also the backend of popular packages in other languages such as
 [pyreadstat](https://github.com/Roche/pyreadstat) for Python
 and [haven](https://github.com/tidyverse/haven) for R.
-ReadStatTables.jl can be viewed as the Julia counterpart for similar purposes.
+As the Julia counterpart for similar purposes,
+ReadStatTables.jl leverages the state-of-the-art Julia ecosystem
+for usability and performance.
+Its read performance, especially when taking advantage of multiple threads,
+surpasses all related packages by a sizable margin
+based on the benchmark results
+[here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks):
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/junyuan-chen/ReadStatTablesBenchmarks/main/results/stable/stata_10k_500.svg" height="240"><br>
+</p>
 
 ## Features
 
 ReadStatTables.jl provides the following features in addition to
-wrapping the C interface of ReadStat.
+wrapping the C interface of ReadStat:
 
-- Efficient data collection from ReadStat parser to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible column table `ReadStatTable`.
-- Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl).
-- Integration of value labels into data columns via a customized array type `LabeledArray`.
-- Translation of date and time values into Julia time types `Date` and `DateTime`.
+- Efficient data collection from ReadStat parser to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible column table `ReadStatTable`
+- Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
+- Integration of value labels into data columns via a custom array type `LabeledArray`
+- Translation of date and time values into Julia time types `Date` and `DateTime`
+
+## Supported File Formats
+
+ReadStatTables.jl recognizes data files with the following file extensions at this moment:
+
+- Stata: `.dta`
+- SAS: `.sas7bdat` and `.xpt`
+- SPSS: `.sav` and `.por`
+
+## Installation
+
+ReadStatTables.jl can be installed with the Julia package manager
+[Pkg](https://docs.julialang.org/en/v1/stdlib/Pkg/).
+From the Julia REPL, type `]` to enter the Pkg REPL and run:
+
+```
+pkg> add ReadStatTables
+```
 
 ## Quick Start
 
@@ -53,14 +81,14 @@ julia> using ReadStatTables
 
 julia> tb = readstat("data/sample.dta")
 5×7 ReadStatTable:
- Row │ mychar    mynum      mydate                dtime         mylabl           myord               mytime 
-     │ String  Float64       Date?            DateTime?  Labeled{Int8}  Labeled{Int8?}             DateTime 
-─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────
-   1 │      a      1.1  2018-05-06  2018-05-06T10:10:10           Male             low  1960-01-01T10:10:10
-   2 │      b      1.2  1880-05-06  1880-05-06T10:10:10         Female          medium  1960-01-01T23:10:10
-   3 │      c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
-   4 │      d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
-   5 │      e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00
+ Row │  mychar    mynum      mydate                dtime         mylabl           myord               mytime 
+     │ String3  Float64       Date?            DateTime?  Labeled{Int8}  Labeled{Int8?}             DateTime 
+─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │       a      1.1  2018-05-06  2018-05-06T10:10:10           Male             low  1960-01-01T10:10:10
+   2 │       b      1.2  1880-05-06  1880-05-06T10:10:10         Female          medium  1960-01-01T23:10:10
+   3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
+   4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
+   5 │       e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00
 ```
 
 To access a column from the above table:
@@ -103,4 +131,4 @@ ReadStatColMeta:
   alignment     => READSTAT_ALIGNMENT_RIGHT
 ```
 
-For additional details, please see the [documentation][docs-stable-url].
+For more details, please see the [documentation][docs-stable-url].
