@@ -280,3 +280,60 @@ set_row_limit(parser::Ptr{Cvoid}, row_limit::Integer) =
 set_row_offset(parser::Ptr{Cvoid}, row_offset::Integer) =
     ccall((:readstat_set_row_offset, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Clong), parser, row_offset)
+
+begin_row(writer) =
+    ccall((:readstat_begin_row, libreadstat), Int, (Ptr{Cvoid},), writer)
+
+end_row(writer) =
+    ccall((:readstat_end_row, libreadstat), Int, (Ptr{Cvoid},), writer)
+
+begin_writing(writer, ::Val{:dta}, io, row_count) =
+    ccall((:readstat_begin_writing_dta, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cint), writer, pointer_from_objref(io), Cint(row_count))
+
+begin_writing(writer, ::Val{:sav}, io, row_count) =
+    ccall((:readstat_begin_writing_sav, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cint), writer, pointer_from_objref(io), Cint(row_count))
+
+begin_writing(writer, ::Val{:por}, io, row_count) =
+    ccall((:readstat_begin_writing_por, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cint), writer, pointer_from_objref(io), Cint(row_count))
+
+begin_writing(writer, ::Val{:sas7bdat}, io, row_count) =
+    ccall((:readstat_begin_writing_sas7bdat, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cint), writer, pointer_from_objref(io), Cint(row_count))
+
+begin_writing(writer, ::Val{:xport}, io, row_count) =
+    ccall((:readstat_begin_writing_xport, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cint), writer, pointer_from_objref(io), Cint(row_count))
+
+insert_double_value(writer, variable, value) =
+    ccall((:readstat_insert_double_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cdouble), writer, variable, value)
+
+insert_float_value(writer, variable, value) =
+    ccall((:readstat_insert_float_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cfloat), writer, variable, value)
+
+insert_int32_value(writer, variable, value) =
+    ccall((:readstat_insert_int32_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cint), writer, variable, value)
+
+insert_int16_value(writer, variable, value) =
+    ccall((:readstat_insert_int16_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cshort), writer, variable, value)
+
+insert_int8_value(writer, variable, value) =
+    ccall((:readstat_insert_int8_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cchar), writer, variable, value)
+
+insert_string_value(writer, variable, value) =
+    ccall((:readstat_insert_string_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}, Cstring), writer, variable, value)
+
+insert_missing_value(writer, variable) =
+    ccall((:readstat_insert_missing_value, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}), writer, variable)
+
+add_variable(writer, name, type, width) =
+    ccall((:readstat_add_variable, libreadstat), Ptr{Cvoid}, (Ptr{Cvoid}, Cstring, Cint, Cint), writer, name, type, width)
+
+writer_init() = ccall((:readstat_writer_init, libreadstat), Ptr{Cvoid}, ())
+
+set_data_writer(writer, write_bytes) =
+    ccall((:readstat_set_data_writer, libreadstat), Int, (Ptr{Cvoid}, Ptr{Cvoid}), writer, write_bytes)
+
+writer_set_file_label(writer, filelabel) =
+    ccall((:readstat_writer_set_file_label, libreadstat), Cvoid, (Ptr{Cvoid}, Cstring), writer, filelabel)
+
+end_writing(writer) = ccall((:readstat_end_writing, libreadstat), Int, (Ptr{Cvoid},), writer)
+
+writer_free(writer) = ccall((:readstat_writer_free, libreadstat), Cvoid, (Ptr{Cvoid},), writer)

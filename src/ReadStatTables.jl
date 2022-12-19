@@ -55,5 +55,7 @@ include("columns.jl")
 include("table.jl")
 include("parser.jl")
 include("readstat.jl")
+include("writer.jl")
+include("writestat.jl")
 
 end
