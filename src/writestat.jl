@@ -54,7 +54,9 @@ function ReadStatTable(table, ext::AbstractString;
         meta.file_ext = ext
         meta.file_format_version = get(default_file_format_version, ext, -1)
     end
-    if length(colmeta) != N
+    # Assume colmeta is manually specified if the length matches
+    # The metadata interface is absent before DataFrames.jl v1.4 which requires Julia v1.6
+    if length(colmeta) != N && colmetadatasupport(typeof(table)).read
         resize!(colmeta, N)
         for i in 1:N
             col = Tables.getcolumn(cols, i)

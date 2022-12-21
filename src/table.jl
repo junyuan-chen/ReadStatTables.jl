@@ -114,9 +114,12 @@ struct ReadStatColMeta <: AbstractMetaDict
     alignment::readstat_alignment_t
 end
 
-ReadStatColMetaVec() =
-    StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
+function ReadStatColMetaVec(N::Integer = 0)
+    colmeta = StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
         Symbol[], Csize_t[], Cint[], readstat_measure_t[], readstat_alignment_t[]))
+    N > 0 && resize!(colmeta, N)
+    return colmeta
+end
 
 function Base.show(io::IO, m::ReadStatColMeta)
     print(io, typeof(m).name.name, "(")
