@@ -94,7 +94,7 @@ function ReadStatTable(table, ext::AbstractString;
     return ReadStatTable(cols, names, vallabels, hasmissing, meta, colmeta, styles)
 end
 
-function ReadStatTable(table::ReadStatTable{<:ColumnsOrChained}, ext::AbstractString;
+function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         update_width::Bool=true,
         kwargs...)
     meta = _meta(table)

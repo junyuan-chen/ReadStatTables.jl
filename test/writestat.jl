@@ -9,5 +9,6 @@
     if VERSION >= v"1.6"
         out = writestat("$(@__DIR__)/../data/write_fallback.dta", df2)
         @test typeof(out) == ReadStatTable{DataFrames.DataFrameColumns{DataFrame}}
+        @test size(out) == size(df2)
     end
 end
