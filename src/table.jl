@@ -56,7 +56,7 @@ mutable struct ReadStatMeta <: AbstractMetaDict
     file_ext::String
 end
 
-ReadStatMeta() = ReadStatMeta(0, 0, unix2datetime(0), unix2datetime(0), 0, false,
+ReadStatMeta() = ReadStatMeta(0, 0, now(), now(), -1, true,
     READSTAT_COMPRESS_NONE, READSTAT_ENDIAN_NONE, "", "", "", String[], "")
 
 Base.setindex!(m::ReadStatMeta, v, n::Symbol) = setfield!(m, n, v)
@@ -113,6 +113,10 @@ struct ReadStatColMeta <: AbstractMetaDict
     measure::readstat_measure_t
     alignment::readstat_alignment_t
 end
+
+ReadStatColMetaVec() =
+    StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
+        Symbol[], Csize_t[], Cint[], readstat_measure_t[], readstat_alignment_t[]))
 
 function Base.show(io::IO, m::ReadStatColMeta)
     print(io, typeof(m).name.name, "(")
@@ -185,17 +189,17 @@ struct ReadStatTable{Cols} <: Tables.AbstractColumns
         vallabels = Dict{Symbol, Dict}()
         hasmissing = Vector{Bool}()
         meta = ReadStatMeta()
-        colmeta = StructVector{ReadStatColMeta}((String[], String[], readstat_type_t[],
-            Symbol[], Csize_t[], Cint[], readstat_measure_t[], readstat_alignment_t[]))
+        colmeta = ReadStatColMetaVec()
         styles = _default_metastyles()
         return new{ReadStatColumns}(columns, names, lookup, vallabels, hasmissing, meta, colmeta, styles)
     end
-    function ReadStatTable(
-            columns::Union{ReadStatColumns, ChainedReadStatColumns},
-            names::Vector{Symbol},
+    function ReadStatTable(columns, names::Vector{Symbol},
             vallabels::Dict{Symbol, Dict}, hasmissing::Vector{Bool},
             meta::ReadStatMeta, colmeta::ColMetaVec,
             styles::Dict{Symbol, Symbol} = _default_metastyles())
+        Tables.istable(columns) ||
+            columns isa Union{ReadStatColumns, ChainedReadStatColumns} ||
+                throw(ArgumentError("columns of type $(typeof(columns)) is not accepted"))
         lookup = Dict{Symbol, Int}(n=>i for (i, n) in enumerate(names))
         N = length(columns)
         length(lookup) == N ||
@@ -278,7 +282,10 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadSta
     )
 end
 
-Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
+Base.@propagate_inbounds getcolumnfast(tb::ReadStatTable, i::Int) =
+    Tables.getcolumn(_columns(tb), i)
+
+Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable{<:ColumnsOrChained}, i::Int)
     lblname = _colmeta(tb, i, :vallabel)
     col = getcolumnfast(tb, i)
     if lblname === Symbol()
@@ -290,6 +297,9 @@ Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     end
 end
 
+Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, i::Int) =
+    getcolumnfast(tb, i)
+
 Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, n::Symbol) =
     Tables.getcolumn(tb, _lookup(tb)[n])
 
@@ -299,10 +309,10 @@ Tables.columnnames(tb::ReadStatTable) = copy(_names(tb))
 Base.getindex(tb::ReadStatTable, n::String) = Tables.getcolumn(tb, Symbol(n))
 
 # This method does not handle value labels
-Base.@propagate_inbounds Base.getindex(tb::ReadStatTable, r, c) =
+Base.@propagate_inbounds Base.getindex(tb::ReadStatTable{<:ColumnsOrChained}, r, c) =
     getindex(_columns(tb), r, Tables.columnindex(tb, c))
 
-Base.@propagate_inbounds Base.setindex!(tb::ReadStatTable, val, r, c) =
+Base.@propagate_inbounds Base.setindex!(tb::ReadStatTable{<:ColumnsOrChained}, val, r, c) =
     setindex!(_columns(tb), val, r, Tables.columnindex(tb, c))
 
 function _geteltype(tb::ReadStatTable{ReadStatColumns}, i)
@@ -315,8 +325,7 @@ function _geteltype(tb::ReadStatTable{ReadStatColumns}, i)
     return T
 end
 
-_geteltype(tb::ReadStatTable{ChainedReadStatColumns}, i) =
-    eltype(Tables.getcolumn(tb, i))
+_geteltype(tb::ReadStatTable, i) = eltype(Tables.getcolumn(tb, i))
 
 Tables.schema(tb::ReadStatTable) =
     Tables.Schema{(_names(tb)...,), Tuple{ntuple(i->_geteltype(tb,i), length(tb))...}}()

@@ -287,9 +287,9 @@ set_data_writer(writer::Ptr{Cvoid}, data_writer::Ptr{Cvoid}) =
     ccall((:readstat_set_data_writer, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Ptr{Cvoid}), writer, data_writer)
 
-add_label_set(writer::Ptr{Cvoid}, type::readstat_type_t, name::AbstractString) =
+add_label_set(writer::Ptr{Cvoid}, type::readstat_type_t, name) =
     ccall((:readstat_add_label_set, libreadstat),
-        readstat_error_t, (Ptr{Cvoid}, Ptr{Cvoid}), writer, data_writer)
+        Ptr{Cvoid}, (Ptr{Cvoid}, readstat_type_t, Cstring), writer, type, name)
 
 label_double_value(label_set::Ptr{Cvoid}, value::Real, label::AbstractString) =
     ccall((:readstat_label_double_value, libreadstat),
@@ -303,7 +303,7 @@ label_tagged_value(label_set::Ptr{Cvoid}, tag::Char, label::AbstractString) =
     ccall((:readstat_label_tagged_value, libreadstat),
         Cvoid, (Ptr{Cvoid}, Cchar, Cstring), label_set, tag, label)
 
-add_variable(writer::Ptr{Cvoid}, name::AbstractString, type::readstat_type_t, storage_width::Integer) =
+add_variable(writer::Ptr{Cvoid}, name, type::readstat_type_t, storage_width::Integer) =
     ccall((:readstat_add_variable, libreadstat), Ptr{Cvoid},
         (Ptr{Cvoid}, Cstring, readstat_type_t, Csize_t), writer, name, type, storage_width)
 
@@ -345,7 +345,7 @@ writer_set_file_label(writer::Ptr{Cvoid}, file_label::AbstractString) =
 
 writer_set_file_timestamp(writer::Ptr{Cvoid}, timestamp::DateTime) =
     ccall((:readstat_writer_set_file_timestamp, libreadstat),
-        readstat_error_t, (Ptr{Cvoid}, UInt), writer, datetime2unix(timestamp))
+        readstat_error_t, (Ptr{Cvoid}, UInt), writer, round(UInt, datetime2unix(timestamp)))
 
 writer_set_file_format_version(writer::Ptr{Cvoid}, file_format_version::Integer) =
     ccall((:readstat_writer_set_file_format_version, libreadstat),
@@ -366,9 +366,9 @@ writer_set_compression(writer::Ptr{Cvoid}, compression::readstat_compress_t) =
 for ext in (:dta, :sav, :por, :sas7bdat, :xport)
     begin_writing = Symbol(:begin_writing_, ext)
     readstat_begin_writing = QuoteNode(Symbol(:readstat_begin_writing_, ext))
-    @eval begin $begin_writing(writer::Ptr{Cvoid}, user_ctx::Ref{Cvoid},
-        row_count::Integer) = ccall(($readstat_parse_ext, libreadstat),
-        readstat_error_t, (Ptr{Cvoid}, Ref{Cvoid}, Clong), writer, user_ctx, row_count)
+    @eval begin $begin_writing(writer::Ptr{Cvoid}, user_ctx::Ref{IOStream},
+        row_count::Integer) = ccall(($readstat_begin_writing, libreadstat),
+        readstat_error_t, (Ptr{Cvoid}, Ref{IOStream}, Clong), writer, user_ctx, row_count)
     end
 end
 
@@ -395,7 +395,7 @@ insert_double_value(writer::Ptr{Cvoid}, variable::Ptr{Cvoid}, value::Float64) =
     ccall((:readstat_insert_double_value, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Ptr{Cvoid}, Cdouble), writer, variable, value)
 
-insert_string_value(writer::Ptr{Cvoid}, variable::Ptr{Cvoid}, value::AbstractString) =
+insert_string_value(writer::Ptr{Cvoid}, variable::Ptr{Cvoid}, value) =
     ccall((:readstat_insert_string_value, libreadstat),
         readstat_error_t, (Ptr{Cvoid}, Ptr{Cvoid}, Cstring), writer, variable, value)
 

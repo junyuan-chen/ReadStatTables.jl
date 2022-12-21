@@ -1,88 +1,139 @@
-function handle_write!(data::Ptr{UInt8}, len::Cint, ctx::Ptr)
-    io = unsafe_pointer_to_objref(ctx) # restore io
-    actual_data = unsafe_wrap(Array{UInt8}, data, (len, )) # we may want to specify the type later
-    write(io, actual_data)
-    return len
-end
+handle_write(data::Ptr{UInt8}, len::Csize_t, ctx::IOStream) =
+    Cssize_t(unsafe_write(ctx, data, len))
 
-function write_data_file(filename::AbstractString, filetype::Val, source; kwargs...) 
-    io = open(filename, "w")
-    write_data_file(filetype::Val, io, source; kwargs...)
-    close(io)
-end
-
-function write_data_file(filetype::Val, io::IO, source; filelabel = "")
-    writer = writer_init()
-    try
-        write_bytes = @cfunction(handle_write!, Cint, (Ptr{UInt8}, Cint, Ptr{Nothing}))
-        set_data_writer(writer, write_bytes)
-        writer_set_file_label(writer, filelabel)
-
-        rows = Tables.rows(source)
-        schema = Tables.schema(rows)
-        if schema === nothing
-            error("Could not determine table schema for data source.")
-        end
-        variables_array = []
-
-        variables_array = map(schema.names, schema.types) do column_name, column_type
-            readstat_type, storage_width = readstat_column_type_and_width(source, column_name, nonmissingtype(column_type))
-            return add_variable!(writer, column_name, readstat_type, storage_width)
-            # readstat_variable_set_label(variable, String(field)) TODO: label for a variable
-        end
-
-        begin_writing(writer, filetype, io, length(rows))
-
-        for row in rows
-            begin_row(writer)
-            Tables.eachcolumn(schema, row) do val, i, name
-                insert_value!(writer, variables_array[i], val)
+function _write_value_label(writer, vallabels)
+    label_sets = Dict{Symbol, Ptr{Cvoid}}()
+    for (lblname, lbls) in vallabels
+        if keytype(lbls) == Union{Float64, Char}
+            label_set = add_label_set(writer, READSTAT_TYPE_DOUBLE, lblname)
+            for (val, lbl) in lbls
+                if val isa Float64
+                    label_double_value(label_set, val, lbl)
+                else
+                    label_tagged_value(label_set, val, lbl)
+                end
             end
-            end_row(writer)
+            label_sets[lblname] = label_set
+        elseif keytype(lbls) == Union{Int32, Char}
+            label_set = add_label_set(writer, READSTAT_TYPE_INT32, lblname)
+            for (val, lbl) in lbls
+                if val isa Int32
+                    label_int32_value(label_set, val, lbl)
+                else
+                    label_tagged_value(label_set, val, lbl)
+                end
+            end
+            label_sets[lblname] = label_set
+        end
+    end
+    return label_sets
+end
+
+function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable{<:ColumnsOrChained})
+    M, N = size(tb)
+    cols = _columns(tb)
+    write_ext(writer, Ref{IOStream}(io), N)
+    for m in 1:M
+        _error(begin_row(writer))
+        for n in 1:N
+            var = get_variable(writer, i-1)
+            @inbounds val = cols[m, n]
+            if val === missing
+                _error(insert_missing_value(writer, var))
+            elseif type === READSTAT_TYPE_INT8
+                _error(insert_int8_value(writer, var, val))
+            elseif type === READSTAT_TYPE_INT16
+                _error(insert_int16_value(writer, var, val))
+            elseif type === READSTAT_TYPE_INT32
+                _error(insert_int32_value(writer, var, val))
+            elseif type === READSTAT_TYPE_FLOAT
+                _error(insert_float_value(writer, var, val))
+            elseif type === READSTAT_TYPE_DOUBLE
+                _error(insert_double_value(writer, var, val))
+            elseif type === READSTAT_TYPE_STRING
+                str = Base.unsafe_convert(Cstring, Base.cconvert(Cstring, val))
+                _error(insert_string_value(writer, var, str))
+            #! To do: handle string_ref and date/time
+            end
+        end
+        _error(end_row(writer))
+    end
+    _error(end_writing(writer))
+end
+
+function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable)
+    rows = Tables.rows(_columns(tb))
+    schema = Tables.schema(tb)
+    types = _colmeta(tb).type
+    write_ext(writer, Ref{IOStream}(io), length(rows))
+    for row in rows
+        _error(begin_row(writer))
+        Tables.eachcolumn(schema, row) do val, i, name
+            var = get_variable(writer, i-1)
+            type = types[i]
+            # unwrap is needed in case the element is a LabeledValue
+            if unwrap(val) === missing
+                _error(insert_missing_value(writer, var))
+            elseif type === READSTAT_TYPE_INT8
+                _error(insert_int8_value(writer, var, unwrap(val)))
+            elseif type === READSTAT_TYPE_INT16
+                _error(insert_int16_value(writer, var, unwrap(val)))
+            elseif type === READSTAT_TYPE_INT32
+                _error(insert_int32_value(writer, var, Int32(unwrap(val))))
+            elseif type === READSTAT_TYPE_FLOAT
+                _error(insert_float_value(writer, var, unwrap(val)))
+            elseif type === READSTAT_TYPE_DOUBLE
+                _error(insert_double_value(writer, var, Float64(unwrap(val))))
+            elseif type === READSTAT_TYPE_STRING
+                str = Base.unsafe_convert(Cstring, Base.cconvert(Cstring, unwrap(val)))
+                _error(insert_string_value(writer, var, str))
+            #! To do: handle string_ref and date/time
+            end
+        end
+        _error(end_row(writer))
+    end
+    _error(end_writing(writer))
+end
+
+function _write(io::IOStream, ext, write_ext, tb)
+    writer = writer_init()
+    set_data_writer(writer, @cfunction(handle_write,
+        Cssize_t, (Ptr{UInt8}, Csize_t, Ref{IOStream})))
+    meta = _meta(tb)
+    colmeta = _colmeta(tb)
+    try
+        label_sets = _write_value_label(writer, getvaluelabels(tb))
+        for (i, name) in enumerate(_names(tb))
+            type = colmeta.type[i]
+            width = colmeta.storage_width[i]
+            var = add_variable(writer, name, type, width)
+            variable_set_label(var, colmeta.label[i])
+            format = colmeta.format[i]
+            format == "" || variable_set_format(var, format)
+            label_set = get(label_sets, colmeta.vallabel[i], nothing)
+            label_set === nothing || variable_set_label_set(var, label_set)
+            variable_set_measure(var, colmeta.measure[i])
+            variable_set_alignment(var, colmeta.alignment[i])
+            variable_set_display_width(var, colmeta.display_width[i])
         end
 
-        end_writing(writer)
+        for note in meta.notes
+            add_note(writer, note)
+        end
+
+        _error(writer_set_file_label(writer, meta.file_label))
+        _error(writer_set_file_timestamp(writer, now()))
+        file_version = meta.file_format_version
+        file_version == -1 || _error(writer_set_file_format_version(writer, file_version))
+        ext == ".xpt" && _error(writer_set_table_name(writer, meta.table_name))
+        ext ∈ (".sas7bdat", ".xpt") && _error(
+            writer_set_file_format_is_64bit(writer, meta.file_format_is_64bit))
+        ext ∈ (".sas7bdat", ".sav") && _error(
+            writer_set_compression(writer, meta.compression))
+
+        _write_value(io, write_ext, writer, tb)
     finally
         writer_free(writer)
+        close(io)
     end
 end
-
-readstat_column_type_and_width(_, _, other_type) = error("Cannot handle column with element type $other_type. Is this type supported by ReadStat?")
-readstat_column_type_and_width(_, _, ::Type{Float64}) = READSTAT_TYPE_DOUBLE, 0
-readstat_column_type_and_width(_, _, ::Type{Float32}) = READSTAT_TYPE_FLOAT, 0
-readstat_column_type_and_width(_, _, ::Type{Int32}) = READSTAT_TYPE_INT32, 0
-readstat_column_type_and_width(_, _, ::Type{Int16}) = READSTAT_TYPE_INT16, 0
-readstat_column_type_and_width(_, _, ::Type{Int8}) = READSTAT_TYPE_CHAR, 0
-function readstat_column_type_and_width(source, colname, ::Type{String})
-    col = Tables.getcolumn(source, colname)
-    maxlen = maximum(col) do str
-        str === missing ? 0 : ncodeunits(str)
-    end
-    if maxlen >= 2045 # maximum length of normal strings
-        return READSTAT_TYPE_LONG_STRING, 0
-    else
-        return READSTAT_TYPE_STRING, maxlen
-    end
-end
-
-add_variable!(writer, name, type, width = 0) = add_variable(writer, name, type, width)
-
-insert_value!(writer, variable, value::Float64) = insert_double_value(writer, variable, value)
-insert_value!(writer, variable, value::Float32) = insert_float_value(writer, variable, value)
-insert_value!(writer, variable, ::Missing) = insert_missing_value(writer, variable)
-insert_value!(writer, variable, value::Int8) = insert_int8_value(writer, variable, value)
-insert_value!(writer, variable, value::Int16) = insert_int16_value(writer, variable, value)
-insert_value!(writer, variable, value::Int32) = insert_int32_value(writer, variable, value)
-insert_value!(writer, variable, value::AbstractString) = insert_string_value(writer, variable, value)
-
-read_dta(filename::AbstractString) = read_data_file(filename, Val(:dta))
-read_sav(filename::AbstractString) = read_data_file(filename, Val(:sav))
-read_por(filename::AbstractString) = read_data_file(filename, Val(:por))
-read_sas7bdat(filename::AbstractString) = read_data_file(filename, Val(:sas7bdat))
-read_xport(filename::AbstractString) = read_data_file(filename, Val(:xport))
-
-write_dta(filename::AbstractString, source; kwargs...) = write_data_file(filename, Val(:dta), source; kwargs...)
-write_sav(filename::AbstractString, source; kwargs...) = write_data_file(filename, Val(:sav), source; kwargs...)
-write_por(filename::AbstractString, source; kwargs...) = write_data_file(filename, Val(:por), source; kwargs...)
-write_sas7bdat(filename::AbstractString, source; kwargs...) = write_data_file(filename, Val(:sas7bdat), source; kwargs...)
-write_xport(filename::AbstractString, source; kwargs...) = write_data_file(filename, Val(:xport), source; kwargs...)

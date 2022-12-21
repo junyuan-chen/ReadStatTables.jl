@@ -19,15 +19,13 @@ const tests = [
     "LabeledArrays",
     "columns",
     "table",
-    "readstat"
+    "readstat",
+    "writestat"
 ]
 
 printstyled("Running tests:\n", color=:blue, bold=true)
 
-@testset "ReadStatTables" verbose=true begin
-    for test in tests
-        @testset "$test" verbose=true begin
-            include("$test.jl")
-        end
-    end
+@time for test in tests
+    include("$test.jl")
+    println("\033[1m\033[32mPASSED\033[0m: $(test)")
 end
