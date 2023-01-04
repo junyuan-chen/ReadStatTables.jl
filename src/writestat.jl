@@ -54,6 +54,12 @@ function ReadStatTable(table, ext::AbstractString;
         meta.file_ext = ext
         meta.file_format_version = get(default_file_format_version, ext, -1)
     end
+    # propagate the three label-like metadata attributes if present
+    if metadatasupport(typeof(table)).read
+        meta.notes = metadata(table, "notes", String[])
+        meta.file_label = metadata(table, "file_label", "")
+        meta.table_name = metadata(table, "table_name", "")
+    end
     # Assume colmeta is manually specified if the length matches
     # The metadata interface is absent before DataFrames.jl v1.4 which requires Julia v1.6
     if length(colmeta) != N && colmetadatasupport(typeof(table)).read
