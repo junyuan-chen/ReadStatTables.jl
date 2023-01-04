@@ -26,6 +26,9 @@ const tests = [
 printstyled("Running tests:\n", color=:blue, bold=true)
 
 @time for test in tests
+    if VERSION < v"1.6" && test == "writestat"
+        continue
+    end
     include("$test.jl")
     println("\033[1m\033[32mPASSED\033[0m: $(test)")
 end
