@@ -127,6 +127,46 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
     return table
 end
 
+"""
+    writestat(filepath, table; ext = lowercase(splitext(filepath)[2]), kwargs...)
+
+Write `table` to a file with extension `ext` located at `filepath`.
+
+The actual object being written out is `ReadStatTable(table, ext; kwargs...)`, so
+specific settings can be controlled with all the `kwargs` that this method supports.
+
+# Accepted File Extensions
+- Stata: `.dta`.
+- SAS: `.sas7bdat` and `.xpt`. (Note: There's a known issue with the underlying `ReadStat` C library that SAS currently cannot read the produced `.sas7bdat` files.)
+- SPSS: `.sav` and `por`.
+
+# Supported types
+
+The argument `table` can be any type compatible with the `Tables.jl` interface.
+Each file format supports a different set of column types:
+
+- Stata:
+    `Int8`, `Int16`, `Int32`, `Float32`, `Float64`, fixed-width strings from 1 to 2045 bytes or
+    arbitrary-length strings with a maximum size of 2,000,000,000 bytes.
+- SAS: TODO
+- SPSS: TODO
+
+# Metadata
+
+Table and column metadata is supported via the interface defined in `DataAPI.jl`.
+
+## Table metadata
+
+The main table metadata fields supported by ReadStatTables are:
+- `"notes"` (`Vector{String}`)
+- `"file_label"` (`String`)
+- `"table_name"` (`String`)
+These will be picked up from `table` automatically via `DataAPI.metadata(table, key)`.
+
+## Column metadata
+
+TODO
+"""
 function writestat(filepath, table;
         ext = lowercase(splitext(filepath)[2]),
         kwargs...)
