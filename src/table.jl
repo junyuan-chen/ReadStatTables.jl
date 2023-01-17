@@ -270,53 +270,12 @@ end
 Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadStatColumns}, i::Int)
     cols = _columns(tb)
     m, n = getfield(cols, 1)[i]
-    if m === 2
-        return getfield(cols, 2)[n]
-    elseif m === 3
-        return getfield(cols, 3)[n]
-    elseif m === 4
-        return getfield(cols, 4)[n]
-    elseif m === 5
-        return getfield(cols, 5)[n]
-    elseif m === 6
-        return getfield(cols, 6)[n]
-    elseif m === 7
-        return getfield(cols, 7)[n]
-    elseif m === 8
-        return getfield(cols, 8)[n]
-    elseif m === 9
-        return getfield(cols, 9)[n]
-    elseif m === 10
-        return getfield(cols, 10)[n]
-    elseif m === 11
-        return getfield(cols, 11)[n]
-    elseif m === 12
-        return getfield(cols, 12)[n]
-    elseif m === 13
-        return getfield(cols, 13)[n]
-    elseif m === 14
-        return getfield(cols, 14)[n]
-    elseif m === 15
-        return getfield(cols, 15)[n]
-    elseif m === 16
-        return getfield(cols, 16)[n]
-    elseif m === 17
-        return getfield(cols, 17)[n]
-    elseif m === 18
-        return getfield(cols, 18)[n]
-    elseif m === 19
-        return getfield(cols, 19)[n]
-    elseif m === 20
-        return getfield(cols, 20)[n]
-    elseif m === 21
-        return getfield(cols, 21)[n]
-    elseif m === 22
-        return getfield(cols, 22)[n]
-    elseif m === 23
-        return getfield(cols, 23)[n]
-    elseif m === 24
-        return getfield(cols, 24)[n]
-    end
+    Base.Cartesian.@nif(
+        24, # 23 ifs and 1 else
+        i -> m === i+1,
+        i -> getfield(cols, i+1)[n],
+        i -> error("invalid index $m")
+    )
 end
 
 Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)

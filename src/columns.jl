@@ -60,7 +60,7 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, i::Int)
         17, # 16 ifs and 1 else
         i -> m === i+1,
         i -> @static(i+1 === 10 ? getfield(cols, m)[n][1] : getfield(cols, m)[n]),
-        i -> error("Invalid index $m")
+        i -> error("invalid index $m")
     )
 end
 
@@ -70,7 +70,7 @@ Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, r, c::Int
         17, # 16 ifs and 1 else
         i -> m === i+1,
         i -> @static(i+1 === 10 ? getindex(getfield(cols, m)[n][1], r) : getindex(getfield(cols, m)[n], r)),
-        i -> error("Invalid index $m")
+        i -> error("invalid index $m")
     )
 end
 
@@ -80,7 +80,7 @@ Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::In
         17, # 16 ifs and 1 else
         i -> m === i+1,
         i -> @static(i+1 === 10 ? setindex!(getfield(cols, m)[n][1], v, r) : setindex!(getfield(cols, m)[n], v, r)),
-        i -> error("Invalid index $m")
+        i -> error("invalid index $m")
     )
 end
 
@@ -298,7 +298,7 @@ Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, i:
         24, # 23 ifs and 1 else
         i -> m === i+1,
         i -> getfield(cols, m)[n],
-        i -> error("Invalid index $m")
+        i -> error("invalid index $m")
     )
 end
 
@@ -308,7 +308,7 @@ Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, r,
         24, # 23 ifs and 1 else
         i -> m === i+1,
         i -> getindex(getfield(cols, m)[n], r),
-        i -> error("Invalid index $m")
+        i -> error("invalid index $m")
     )
 end
 
@@ -318,7 +318,7 @@ Base.@propagate_inbounds function Base.setindex!(cols::ChainedReadStatColumns, v
         24, # 23 ifs and 1 else
         i -> m === i+1,
         i -> setindex!(getfield(cols, m)[n], v, r),
-        i -> error("Invalid index $m")
+        i -> error("invalid index $m")
     )
 end
 
