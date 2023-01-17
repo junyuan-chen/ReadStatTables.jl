@@ -56,113 +56,32 @@ end
 # If-else branching is needed for type stability
 Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, i::Int)
     m, n = getfield(cols, 1)[i]
-    if m === 2
-        return getfield(cols, 2)[n]
-    elseif m === 3
-        return getfield(cols, 3)[n]
-    elseif m === 4
-        return getfield(cols, 4)[n]
-    elseif m === 5
-        return getfield(cols, 5)[n]
-    elseif m === 6
-        return getfield(cols, 6)[n]
-    elseif m === 7
-        return getfield(cols, 7)[n]
-    elseif m === 8
-        return getfield(cols, 8)[n]
-    elseif m === 9
-        return getfield(cols, 9)[n]
-    elseif m === 10
-        return getfield(cols, 10)[n][1]
-    elseif m === 11
-        return getfield(cols, 11)[n]
-    elseif m === 12
-        return getfield(cols, 12)[n]
-    elseif m === 13
-        return getfield(cols, 13)[n]
-    elseif m === 14
-        return getfield(cols, 14)[n]
-    elseif m === 15
-        return getfield(cols, 15)[n]
-    elseif m === 16
-        return getfield(cols, 16)[n]
-    elseif m === 17
-        return getfield(cols, 17)[n]
-    end
+    Base.Cartesian.@nif(
+        17, # 16 ifs and 1 else
+        i -> m === i+1,
+        i -> @static(i+1 === 10 ? getfield(cols, m)[n][1] : getfield(cols, m)[n]),
+        i -> error("invalid index $m")
+    )
 end
 
 Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, r, c::Int)
     m, n = getfield(cols, 1)[c]
-    if m === 2
-        return getindex(getfield(cols, 2)[n], r)
-    elseif m === 3
-        return getindex(getfield(cols, 3)[n], r)
-    elseif m === 4
-        return getindex(getfield(cols, 4)[n], r)
-    elseif m === 5
-        return getindex(getfield(cols, 5)[n], r)
-    elseif m === 6
-        return getindex(getfield(cols, 6)[n], r)
-    elseif m === 7
-        return getindex(getfield(cols, 7)[n], r)
-    elseif m === 8
-        return getindex(getfield(cols, 8)[n], r)
-    elseif m === 9
-        return getindex(getfield(cols, 9)[n], r)
-    elseif m === 10
-        return getindex(getfield(cols, 10)[n][1], r)
-    elseif m === 11
-        return getindex(getfield(cols, 11)[n], r)
-    elseif m === 12
-        return getindex(getfield(cols, 12)[n], r)
-    elseif m === 13
-        return getindex(getfield(cols, 13)[n], r)
-    elseif m === 14
-        return getindex(getfield(cols, 14)[n], r)
-    elseif m === 15
-        return getindex(getfield(cols, 15)[n], r)
-    elseif m === 16
-        return getindex(getfield(cols, 16)[n], r)
-    elseif m === 17
-        return getindex(getfield(cols, 17)[n], r)
-    end
+    Base.Cartesian.@nif(
+        17, # 16 ifs and 1 else
+        i -> m === i+1,
+        i -> @static(i+1 === 10 ? getindex(getfield(cols, m)[n][1], r) : getindex(getfield(cols, m)[n], r)),
+        i -> error("invalid index $m")
+    )
 end
 
 Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::Int, c::Int)
     m, n = getfield(cols, 1)[c]
-    if m === 2
-        return setindex!(getfield(cols, 2)[n], v, r)
-    elseif m === 3
-        return setindex!(getfield(cols, 3)[n], v, r)
-    elseif m === 4
-        return setindex!(getfield(cols, 4)[n], v, r)
-    elseif m === 5
-        return setindex!(getfield(cols, 5)[n], v, r)
-    elseif m === 6
-        return setindex!(getfield(cols, 6)[n], v, r)
-    elseif m === 7
-        return setindex!(getfield(cols, 7)[n], v, r)
-    elseif m === 8
-        return setindex!(getfield(cols, 8)[n], v, r)
-    elseif m === 9
-        return setindex!(getfield(cols, 9)[n], v, r)
-    elseif m === 10
-        return setindex!(getfield(cols, 10)[n][1], v, r)
-    elseif m === 11
-        return setindex!(getfield(cols, 11)[n], v, r)
-    elseif m === 12
-        return setindex!(getfield(cols, 12)[n], v, r)
-    elseif m === 13
-        return setindex!(getfield(cols, 13)[n], v, r)
-    elseif m === 14
-        return setindex!(getfield(cols, 14)[n], v, r)
-    elseif m === 15
-        return setindex!(getfield(cols, 15)[n], v, r)
-    elseif m === 16
-        return setindex!(getfield(cols, 16)[n], v, r)
-    elseif m === 17
-        return setindex!(getfield(cols, 17)[n], v, r)
-    end
+    Base.Cartesian.@nif(
+        17, # 16 ifs and 1 else
+        i -> m === i+1,
+        i -> @static(i+1 === 10 ? setindex!(getfield(cols, m)[n][1], v, r) : setindex!(getfield(cols, m)[n], v, r)),
+        i -> error("invalid index $m")
+    )
 end
 
 for sz in (3, 7, 15, 31, 63, 127, 255)
@@ -375,155 +294,32 @@ end
 
 Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, i::Int)
     m, n = getfield(cols, 1)[i]
-    if m === 2
-        return getfield(cols, 2)[n]
-    elseif m === 3
-        return getfield(cols, 3)[n]
-    elseif m === 4
-        return getfield(cols, 4)[n]
-    elseif m === 5
-        return getfield(cols, 5)[n]
-    elseif m === 6
-        return getfield(cols, 6)[n]
-    elseif m === 7
-        return getfield(cols, 7)[n]
-    elseif m === 8
-        return getfield(cols, 8)[n]
-    elseif m === 9
-        return getfield(cols, 9)[n]
-    elseif m === 10
-        return getfield(cols, 10)[n]
-    elseif m === 11
-        return getfield(cols, 11)[n]
-    elseif m === 12
-        return getfield(cols, 12)[n]
-    elseif m === 13
-        return getfield(cols, 13)[n]
-    elseif m === 14
-        return getfield(cols, 14)[n]
-    elseif m === 15
-        return getfield(cols, 15)[n]
-    elseif m === 16
-        return getfield(cols, 16)[n]
-    elseif m === 17
-        return getfield(cols, 17)[n]
-    elseif m === 18
-        return getfield(cols, 18)[n]
-    elseif m === 19
-        return getfield(cols, 19)[n]
-    elseif m === 20
-        return getfield(cols, 20)[n]
-    elseif m === 21
-        return getfield(cols, 21)[n]
-    elseif m === 22
-        return getfield(cols, 22)[n]
-    elseif m === 23
-        return getfield(cols, 23)[n]
-    elseif m === 24
-        return getfield(cols, 24)[n]
-    end
+    Base.Cartesian.@nif(
+        24, # 23 ifs and 1 else
+        i -> m === i+1,
+        i -> getfield(cols, m)[n],
+        i -> error("invalid index $m")
+    )
 end
 
 Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, r, c::Int)
     m, n = getfield(cols, 1)[c]
-    if m === 2
-        return getindex(getfield(cols, 2)[n], r)
-    elseif m === 3
-        return getindex(getfield(cols, 3)[n], r)
-    elseif m === 4
-        return getindex(getfield(cols, 4)[n], r)
-    elseif m === 5
-        return getindex(getfield(cols, 5)[n], r)
-    elseif m === 6
-        return getindex(getfield(cols, 6)[n], r)
-    elseif m === 7
-        return getindex(getfield(cols, 7)[n], r)
-    elseif m === 8
-        return getindex(getfield(cols, 8)[n], r)
-    elseif m === 9
-        return getindex(getfield(cols, 9)[n], r)
-    elseif m === 10
-        return getindex(getfield(cols, 10)[n], r)
-    elseif m === 11
-        return getindex(getfield(cols, 11)[n], r)
-    elseif m === 12
-        return getindex(getfield(cols, 12)[n], r)
-    elseif m === 13
-        return getindex(getfield(cols, 13)[n], r)
-    elseif m === 14
-        return getindex(getfield(cols, 14)[n], r)
-    elseif m === 15
-        return getindex(getfield(cols, 15)[n], r)
-    elseif m === 16
-        return getindex(getfield(cols, 16)[n], r)
-    elseif m === 17
-        return getindex(getfield(cols, 17)[n], r)
-    elseif m === 18
-        return getindex(getfield(cols, 18)[n], r)
-    elseif m === 19
-        return getindex(getfield(cols, 19)[n], r)
-    elseif m === 20
-        return getindex(getfield(cols, 20)[n], r)
-    elseif m === 21
-        return getindex(getfield(cols, 21)[n], r)
-    elseif m === 22
-        return getindex(getfield(cols, 22)[n], r)
-    elseif m === 23
-        return getindex(getfield(cols, 23)[n], r)
-    elseif m === 24
-        return getindex(getfield(cols, 24)[n], r)
-    end
+    Base.Cartesian.@nif(
+        24, # 23 ifs and 1 else
+        i -> m === i+1,
+        i -> getindex(getfield(cols, m)[n], r),
+        i -> error("invalid index $m")
+    )
 end
 
 Base.@propagate_inbounds function Base.setindex!(cols::ChainedReadStatColumns, v, r::Int, c::Int)
     m, n = getfield(cols, 1)[c]
-    if m === 2
-        return setindex!(getfield(cols, 2)[n], v, r)
-    elseif m === 3
-        return setindex!(getfield(cols, 3)[n], v, r)
-    elseif m === 4
-        return setindex!(getfield(cols, 4)[n], v, r)
-    elseif m === 5
-        return setindex!(getfield(cols, 5)[n], v, r)
-    elseif m === 6
-        return setindex!(getfield(cols, 6)[n], v, r)
-    elseif m === 7
-        return setindex!(getfield(cols, 7)[n], v, r)
-    elseif m === 8
-        return setindex!(getfield(cols, 8)[n], v, r)
-    elseif m === 9
-        return setindex!(getfield(cols, 9)[n], v, r)
-    elseif m === 10
-        return setindex!(getfield(cols, 10)[n], v, r)
-    elseif m === 11
-        return setindex!(getfield(cols, 11)[n], v, r)
-    elseif m === 12
-        return setindex!(getfield(cols, 12)[n], v, r)
-    elseif m === 13
-        return setindex!(getfield(cols, 13)[n], v, r)
-    elseif m === 14
-        return setindex!(getfield(cols, 14)[n], v, r)
-    elseif m === 15
-        return setindex!(getfield(cols, 15)[n], v, r)
-    elseif m === 16
-        return setindex!(getfield(cols, 16)[n], v, r)
-    elseif m === 17
-        return setindex!(getfield(cols, 17)[n], v, r)
-    elseif m === 18
-        return setindex!(getfield(cols, 18)[n], v, r)
-    elseif m === 19
-        return setindex!(getfield(cols, 19)[n], v, r)
-    elseif m === 20
-        return setindex!(getfield(cols, 20)[n], v, r)
-    elseif m === 21
-        return setindex!(getfield(cols, 21)[n], v, r)
-    elseif m === 22
-        return setindex!(getfield(cols, 22)[n], v, r)
-    elseif m === 23
-        return setindex!(getfield(cols, 23)[n], v, r)
-    elseif m === 24
-        return setindex!(getfield(cols, 24)[n], v, r)
-    end
+    Base.Cartesian.@nif(
+        24, # 23 ifs and 1 else
+        i -> m === i+1,
+        i -> setindex!(getfield(cols, m)[n], v, r),
+        i -> error("invalid index $m")
+    )
 end
 
 function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{StringColumn})
