@@ -32,12 +32,14 @@ end
 function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable{<:ColumnsOrChained})
     M, N = size(tb)
     cols = _columns(tb)
-    write_ext(writer, Ref{IOStream}(io), N)
+    types = _colmeta(tb, :type)
+    write_ext(writer, Ref{IOStream}(io), M)
     for m in 1:M
         _error(begin_row(writer))
         for n in 1:N
-            var = get_variable(writer, i-1)
+            var = get_variable(writer, n-1)
             @inbounds val = cols[m, n]
+            @inbounds type = types[n]
             if val === missing
                 _error(insert_missing_value(writer, var))
             elseif type === READSTAT_TYPE_INT8
@@ -64,13 +66,13 @@ end
 function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable)
     rows = Tables.rows(_columns(tb))
     schema = Tables.schema(tb)
-    types = _colmeta(tb).type
+    types = _colmeta(tb, :type)
     write_ext(writer, Ref{IOStream}(io), length(rows))
     for row in rows
         _error(begin_row(writer))
         Tables.eachcolumn(schema, row) do val, i, name
             var = get_variable(writer, i-1)
-            type = types[i]
+            @inbounds type = types[i]
             # unwrap is needed in case the element is a LabeledValue
             if unwrap(val) === missing
                 _error(insert_missing_value(writer, var))

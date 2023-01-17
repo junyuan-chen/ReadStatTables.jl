@@ -10,7 +10,7 @@ const ext2writer = Dict{String, Any}(
 rstype(::Type{Int8}) = READSTAT_TYPE_INT8
 rstype(::Type{Int16}) = READSTAT_TYPE_INT16
 rstype(::Type{<:Integer}) = READSTAT_TYPE_INT32
-rstype(::Type{Float32}) = READSTAT_TYPE_Float
+rstype(::Type{Float32}) = READSTAT_TYPE_FLOAT
 rstype(::Type{<:Real}) = READSTAT_TYPE_DOUBLE
 rstype(::Type{<:AbstractString}) = READSTAT_TYPE_STRING
 rstype(type) = error("element type $type is not supported")
@@ -25,10 +25,10 @@ const default_file_format_version = Dict{String, Int}(
 # Accepted maximum length for strings varies by the file format and version
 function _readstat_string_width(col)
     if eltype(col) <: Union{InlineString, Missing}
-        return Csize_t(sizeof(col))
+        return Csize_t(sizeof(eltype(col))-1)
     else
         maxlen = maximum(col) do str
-            str === missing ? 0 : ncodeunits(str)
+            ismissing(str) ? 0 : ncodeunits(str)
         end
         return Csize_t(maxlen)
     end
@@ -101,8 +101,7 @@ function ReadStatTable(table, ext::AbstractString;
 end
 
 function ReadStatTable(table::ReadStatTable, ext::AbstractString;
-        update_width::Bool=true,
-        kwargs...)
+        update_width::Bool=true, kwargs...)
     meta = _meta(table)
     meta.row_count = nrow(table)
     meta.var_count = ncol(table)
@@ -114,14 +113,12 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         for i in 1:ncol(table)
             type = _colmeta(table, i, :type)
             if type === READSTAT_TYPE_STRING
-                width = _readstat_string_width(col)
+                col = Tables.getcolumn(table, i)
+                _colmeta!(table, i, :storage_width, _readstat_string_width(col))
             elseif type === READSTAT_TYPE_DOUBLE
                 # Only needed for .xpt files
-                width = Csize_t(8)
-            else
-                width = Csize_t(0)
+                _colmeta!(table, i, :storage_width, Csize_t(8))
             end
-            colmeta.storage_width[i] = width
         end
     end
     return table
@@ -130,42 +127,43 @@ end
 """
     writestat(filepath, table; ext = lowercase(splitext(filepath)[2]), kwargs...)
 
-Write `table` to a file with extension `ext` located at `filepath`.
+Write a `Tables.jl`-compatible `table` to `filepath` as a data file supported by `ReadStat`.
+File format is determined based on the extension contained in `filepath`
+and may be overriden by the `ext` keyword.
 
-The actual object being written out is `ReadStatTable(table, ext; kwargs...)`, so
-specific settings can be controlled with all the `kwargs` that this method supports.
+Any user-provided `table` is converted to a [`ReadStatTable`](@ref) first
+before being handled by a `ReadStat` writer.
+Therefore, to gain fine-grained control over the content to be written,
+especially for metadata,
+one may directly work with a [`ReadStatTable`](@ref)
+(possibly converted from another table type such as `DataFrame` from `DataFrames.jl`)
+before passing it to `writestat`.
+Alternatively, one may pass any keyword argument accepted by
+a constructor of [`ReadStatTable`](@ref) to `writestat`.
+The actual [`ReadStatTable`](@ref) handled by the writer is returned
+after the writer finishes.
 
-# Accepted File Extensions
-- Stata: `.dta`.
-- SAS: `.sas7bdat` and `.xpt`. (Note: There's a known issue with the underlying `ReadStat` C library that SAS currently cannot read the produced `.sas7bdat` files.)
-- SPSS: `.sav` and `por`.
+# Supported File Formats
+- Stata: `.dta`
+- SAS: `.sas7bdat` and `.xpt` (Note: `SAS` may not recognize the produced `.sas7bdat` files due to a known limitation with `ReadStat`.)
+- SPSS: `.sav` and `por`
 
-# Supported types
+# Conversion
 
-The argument `table` can be any type compatible with the `Tables.jl` interface.
-Each file format supports a different set of column types:
+For data values, Julia objects are converted to the closest `ReadStat` type
+for either numerical values or strings.
+However, depending on the file format of the output file,
+a data column may be written in a different type
+when the closest `ReadStat` type is not supported.
 
-- Stata:
-    `Int8`, `Int16`, `Int32`, `Float32`, `Float64`, fixed-width strings from 1 to 2045 bytes or
-    arbitrary-length strings with a maximum size of 2,000,000,000 bytes.
-- SAS: TODO
-- SPSS: TODO
-
-# Metadata
-
-Table and column metadata is supported via the interface defined in `DataAPI.jl`.
-
-## Table metadata
-
-The main table metadata fields supported by ReadStatTables are:
-- `"notes"` (`Vector{String}`)
-- `"file_label"` (`String`)
-- `"table_name"` (`String`)
-These will be picked up from `table` automatically via `DataAPI.metadata(table, key)`.
-
-## Column metadata
-
-TODO
+For metadata, if the user-provided `table` is not a [`ReadStatTable`](@ref),
+an attempt will be made to collect
+any table-level or column-level metadata with a key
+that matches a metadata field in [`ReadStatMeta`](@ref) or [`ReadStatColMeta`](@ref)
+via the `metadata` and `colmetadata` interface defined by `DataAPI.jl`.
+If the `table` is a [`ReadStatTable`](@ref),
+then the associated metadata will be written as long as their values
+are compatible with the format of the output file.
 """
 function writestat(filepath, table;
         ext = lowercase(splitext(filepath)[2]),
