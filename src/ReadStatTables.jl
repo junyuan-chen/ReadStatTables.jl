@@ -46,7 +46,9 @@ export LabeledValue,
 
        readstat,
        readstatmeta,
-       readstatallmeta
+       readstatallmeta,
+
+       writestat
 
 include("wrappers.jl")
 include("LabeledArrays.jl")
@@ -55,5 +57,7 @@ include("columns.jl")
 include("table.jl")
 include("parser.jl")
 include("readstat.jl")
+include("writer.jl")
+include("writestat.jl")
 
 end
