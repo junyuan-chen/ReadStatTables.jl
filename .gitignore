@@ -5,4 +5,4 @@ docs/build
 docs/site
 *Manifest.toml
 *temp*
-data/sample_write_test*
+data/*write*

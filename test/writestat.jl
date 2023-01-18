@@ -1,11 +1,29 @@
+@testset "writestat conversion" begin
+    @test rstype(Int64) == READSTAT_TYPE_INT32
+    @test_throws ErrorException rstype(ComplexF64)
+end
+
 @testset "writestat dta" begin
     alltypes = "$(@__DIR__)/../data/alltypes.dta"
     dtype = readstat(alltypes)
     tb = writestat("$(@__DIR__)/../data/write_alltypes.dta", dtype)
     @test isequal(tb, dtype)
     df = DataFrame(dtype)
-    tb2 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", dtype)
-    @test isequal(tb2, dtype)
+    tb2 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
+    @test all(i->isequal(getcolumn(tb2,i), getcolumn(dtype,i)), 1:ncol(tb2))
+    lbl = copy(getvaluelabels(df.vbyte))
+    lbl[Int32(2)] = "B"
+    df[!,:vbyte] = LabeledArray(refarray(df.vbyte), lbl)
+    @test_throws ErrorException writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
+    emptymetadata!(df)
+    emptycolmetadata!(df)
+    tb3 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
+    @test all(i->isequal(getcolumn(tb3,i), getcolumn(dtype,i)), 1:ncol(tb3))
+    @test colmetadata(tb3, :vbyte, :vallabel) == :vbyte
+    @test colmetadata(tb3, :vfloat, :vallabel) == :vfloat
+    # Change output format
+    tb4 = writestat("$(@__DIR__)/../data/write_df_alltypes.xpt", dtype)
+    tb5 = writestat("$(@__DIR__)/../data/write_df_alltypes.xpt", df)
 
     stringtypes = "$(@__DIR__)/../data/stringtypes.dta"
     strtype = readstat(stringtypes)
@@ -14,10 +32,14 @@
     @test Int.(colmetavalues(tb, :storage_width)) ==
         [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 64, 127, 128, 255, 256]
     df = DataFrame(strtype)
-    tb2 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", strtype)
+    tb2 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", df)
     @test Int.(colmetavalues(tb2, :storage_width)) ==
         [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 64, 127, 128, 255, 256]
-    @test isequal(tb2, strtype)
+    @test all(i->isequal(getcolumn(tb2,i), getcolumn(strtype,i)), 1:ncol(tb2))
+    emptymetadata!(df)
+    emptycolmetadata!(df)
+    tb3 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", df)
+    @test all(i->isequal(getcolumn(tb3,i), getcolumn(strtype,i)), 1:ncol(tb3))
 end
 
 extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]

@@ -8,12 +8,13 @@ using Dates
 using InlineStrings
 using PooledArrays
 using ReadStatTables: error_message, READSTAT_COMPRESS_NONE, READSTAT_ENDIAN_NONE,
-    READSTAT_TYPE_INT8, READSTAT_TYPE_DOUBLE, READSTAT_MEASURE_UNKNOWN,
+    READSTAT_TYPE_INT8, READSTAT_TYPE_INT32, READSTAT_TYPE_DOUBLE, READSTAT_MEASURE_UNKNOWN,
     READSTAT_ALIGNMENT_UNKNOWN, READSTAT_ERROR_OPEN, _error,
-    Int8Column, _pushmissing!, _pushchain!, _setntasks
+    Int8Column, _pushmissing!, _pushchain!, _setntasks, rstype
 using SentinelArrays: SentinelArray, SentinelVector, ChainedVector
 using StructArrays: StructVector
 using Tables
+using Tables: getcolumn
 
 const tests = [
     "LabeledArrays",

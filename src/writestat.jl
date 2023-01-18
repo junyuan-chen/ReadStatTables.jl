@@ -53,14 +53,22 @@ function ReadStatTable(table, ext::AbstractString;
     if ext != meta.file_ext
         meta.file_ext = ext
         meta.file_format_version = get(default_file_format_version, ext, -1)
+        # Throw away any existing format string for now
+        fill!(colmeta.format, "")
     end
-    # propagate the three label-like metadata attributes if present
+    # Propagate the three label-like metadata attributes if present
     if metadatasupport(typeof(table)).read
-        meta.notes = metadata(table, "notes", String[])
+        #! Need more tests on notes
+        notes = metadata(table, "notes", nothing)
+        if notes !== nothing
+            meta.notes = notes isa AbstractString ? [notes] : notes
+        end
         meta.file_label = metadata(table, "file_label", "")
+        # Only used for .xpt files
         meta.table_name = metadata(table, "table_name", "")
     end
     # Assume colmeta is manually specified if the length matches
+    # Otherwise, any value in colmeta is overwritten
     # The metadata interface is absent before DataFrames.jl v1.4 which requires Julia v1.6
     if length(colmeta) != N && colmetadatasupport(typeof(table)).read
         resize!(colmeta, N)
@@ -71,14 +79,20 @@ function ReadStatTable(table, ext::AbstractString;
             colmeta.format[i] = colmetadata(table, i, "format", "")
             #! To do: ensure that an array of type such as CategoricalArray works
             #! Consider constructing value labels for such arrays
-            type = rstype(nonmissingtype(eltype(refarray(col))))
+            if col isa LabeledArrOrSubOrReshape
+                type = rstype(nonmissingtype(eltype(refarray(col))))
+            else
+                type = rstype(nonmissingtype(eltype(col)))
+            end
             colmeta.type[i] = colmetadata(table, i, "type", type)
             lblname = colmetadata(table, i, "vallabel", Symbol())
             colmeta.vallabel[i] = lblname
             if col isa LabeledArrOrSubOrReshape
+                lblname == Symbol() && (lblname = Symbol(names[i]))
                 lbls = get(vallabels, lblname, nothing)
                 if lbls === nothing
                     vallabels[lblname] = getvaluelabels(col)
+                    colmeta.vallabel[i] = lblname
                 elseif lbls != getvaluelabels(col)
                     error("value label name $lblname is not unique")
                 end
@@ -92,7 +106,7 @@ function ReadStatTable(table, ext::AbstractString;
                 width = Csize_t(0)
             end
             colmeta.storage_width[i] = width
-            colmeta.display_width[i] = max(Cint(width), Cint(8))
+            colmeta.display_width[i] = max(Cint(width), Cint(9))
             colmeta.measure[i] = READSTAT_MEASURE_UNKNOWN
             colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
         end
@@ -101,23 +115,25 @@ function ReadStatTable(table, ext::AbstractString;
 end
 
 function ReadStatTable(table::ReadStatTable, ext::AbstractString;
-        update_width::Bool=true, kwargs...)
+        update_width::Bool = true, kwargs...)
     meta = _meta(table)
     meta.row_count = nrow(table)
     meta.var_count = ncol(table)
+    colmeta = _colmeta(table)
     if ext != meta.file_ext
         meta.file_ext = ext
         meta.file_format_version = get(default_file_format_version, ext, -1)
+        fill!(colmeta.format, "")
     end
-    if update_width
-        for i in 1:ncol(table)
-            type = _colmeta(table, i, :type)
+    for i in 1:ncol(table)
+        col = Tables.getcolumn(table, i)
+        if update_width
+            type = colmeta.type[i]
             if type === READSTAT_TYPE_STRING
-                col = Tables.getcolumn(table, i)
-                _colmeta!(table, i, :storage_width, _readstat_string_width(col))
+                colmeta.storage_width[i] = _readstat_string_width(col)
             elseif type === READSTAT_TYPE_DOUBLE
                 # Only needed for .xpt files
-                _colmeta!(table, i, :storage_width, Csize_t(8))
+                colmeta.storage_width[i] = Csize_t(8)
             end
         end
     end
@@ -165,9 +181,7 @@ If the `table` is a [`ReadStatTable`](@ref),
 then the associated metadata will be written as long as their values
 are compatible with the format of the output file.
 """
-function writestat(filepath, table;
-        ext = lowercase(splitext(filepath)[2]),
-        kwargs...)
+function writestat(filepath, table; ext = lowercase(splitext(filepath)[2]), kwargs...)
     filepath = string(filepath)
     write_ext = get(ext2writer, ext, nothing)
     write_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
