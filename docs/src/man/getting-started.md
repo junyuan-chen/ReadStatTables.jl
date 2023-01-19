@@ -128,6 +128,42 @@ convertvalue(Int32, tb.mylabl)
 convertvalue
 ```
 
+## Writing a Data File
+
+To write a table to a supported data file format:
+
+```@repl getting-started
+# Create a data frame for illustration
+df = DataFrame(readstat("data/alltypes.dta")); emptycolmetadata!(df)
+out = writestat("data/write_alltypes.dta", df)
+```
+
+The returned table `out` contains the actual data (including metadata)
+that are exposed to the writer.
+
+Value labels attached to a `LabeledArray` are always preserved in the output file.
+If the input table contains any column of type `CategoricalArray` or `PooledArray`,
+value labels are created and written automatically by default:
+
+```@repl getting-started
+using PooledArrays
+df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
+df[!,:vint] = PooledArray(valuelabels(df.vint))
+out = writestat("data/write_alltypes.dta", df)
+```
+
+Notice that in the returned table, the columns `vbyte` and `vint` are `LabeledArray`s:
+
+```@repl getting-started
+out.vbyte
+out.vint
+```
+
+!!! warning
+
+    The write support is experimental and not fully developed.
+    Caution should be taken when writing the data files.
+
 ## More Options
 
 The behavior of `readstat` can be adjusted by passing keyword arguments:
@@ -150,8 +186,18 @@ readstatmeta
 ```
 
 To additionally collect variable-level metadata and all value labels:
+
 ```@docs
 readstatallmeta
+```
+
+For writing tables to data files,
+one may gain more control by first converting a table to a `ReadStatTable`:
+
+```@docs
+writestat
+ReadStatTable(table, ext::AbstractString; kwargs...)
+ReadStatTable(table::ReadStatTable, ext::AbstractString; kwargs...)
 ```
 
 [^1]: The printed output is generated with [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl).

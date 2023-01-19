@@ -168,12 +168,15 @@ _default_metastyles() =
 """
     ReadStatTable{Cols} <: Tables.AbstractColumns
 
-A `Tables.jl`-compatible column table that efficiently collects data
-from a Stata, SAS or SPSS file processed with the `ReadStat` C library.
+A `Tables.jl`-compatible column table that collects data read from or written to
+a Stata, SAS or SPSS file processed with the `ReadStat` C library.
 File-level and variable-level metadata can be retrieved and modified
 via methods compatible with `DataAPI.jl`.
+For a `ReadStatTable` constructed by [`readstat`](@ref),
 `Cols` is either `ReadStatColumns` or `ChainedReadStatColumns`
 depending on whether multiple threads are used for parsing the data file.
+For a `ReadStatTable` constructed for [`writestat`](@ref),
+`Cols` is allowed to be a column table type for any `Tables.jl`-compatible table.
 See also [`ReadStatMeta`](@ref) and [`ReadStatColMeta`](@ref) for the included metadata.
 """
 struct ReadStatTable{Cols} <: Tables.AbstractColumns
@@ -288,7 +291,7 @@ end
 Base.@propagate_inbounds getcolumnfast(tb::ReadStatTable, i::Int) =
     Tables.getcolumn(_columns(tb), i)
 
-Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable{<:ColumnsOrChained}, i::Int)
+Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     lblname = _colmeta(tb, i, :vallabel)
     col = getcolumnfast(tb, i)
     if lblname === Symbol()
@@ -296,12 +299,9 @@ Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable{<:ColumnsOr
     else
         # Value labels might be missing despite their name existing in metadata
         lbls = get(_vallabels(tb), lblname, nothing)
-        return lbls === nothing ? col : LabeledArray(col, lbls)
+        return lbls === nothing ? col : LabeledArray(refarray(col), lbls)
     end
 end
-
-Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, i::Int) =
-    getcolumnfast(tb, i)
 
 Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, n::Symbol) =
     Tables.getcolumn(tb, _lookup(tb)[n])

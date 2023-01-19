@@ -34,7 +34,55 @@ function _readstat_string_width(col)
     end
 end
 
+function _set_vallabels!(colmetavec, vallabels, lblname, refpoolaslabel, names, col, i)
+    lbls = get(vallabels, lblname, nothing)
+    lblname === Symbol() && (lblname = Symbol(names[i]))
+    if col isa LabeledArrOrSubOrReshape
+        if lbls === nothing
+            vallabels[lblname] = getvaluelabels(col)
+        else
+            lbls == getvaluelabels(col) ||
+                error("value label name $lblname is not unique")
+        end
+        colmetavec.vallabel[i] = lblname
+    elseif lblname === Symbol() || lbls === nothing
+        pool = refpool(col)
+        if pool === nothing || !refpoolaslabel
+            # Any specified vallabel is ignored as labels do not exist
+            colmetavec.vallabel[i] = Symbol()
+        else
+            lbls = Dict{Union{Int32,Char},String}(Int32(k) => v for (k, v) in pairs(pool))
+            vallabels[lblname] = lbls
+            colmetavec.type[i] = rstype(nonmissingtype(eltype(refarray(col))))
+            colmetavec.vallabel[i] = lblname
+        end
+    end
+end
+
+"""
+    ReadStatTable(table, ext::AbstractString; kwargs...)
+
+Construct a `ReadStatTable` by wrapping a `Tables.jl`-compatible column table
+for a supported file format with extension `ext`.
+An attempt is made to collect table-level or column-level metadata with a key
+that matches a metadata field in [`ReadStatMeta`](@ref) or [`ReadStatColMeta`](@ref)
+via the `metadata` and `colmetadata` interface defined by `DataAPI.jl`.
+
+This method is used by [`writestat`](@ref) when the provided `table`
+is not already a `ReadStatTable`.
+Hence, it is useful for gaining fine-grained control over the content to be written.
+Metadata may be manually specified with keyword arguments.
+
+# Keywords
+- `refpoolaslabel::Bool = true`: generate value labels for columns of an array type that makes use of `DataAPI.refpool` (e.g., `CategoricalArray` and `PooledArray`).
+- `vallabels::Dict{Symbol, Dict} = Dict{Symbol, Dict}()`: a dictionary of all value label dictionaries indexed by their names.
+- `hasmissing::Vector{Bool} = Vector{Bool}()`: a vector of indicators for whether any missing value present in the corresponding column; irrelavent for writing tables.
+- `meta::ReadStatMeta = ReadStatMeta()`: file-level metadata.
+- `colmeta::ColMetaVec = ReadStatColMetaVec()`: variable-level metadata stored in a `StructArray` of `ReadStatColMeta`s; only used when its length matches the number of columns in `table`.
+- `styles::Dict{Symbol, Symbol} = _default_metastyles()`: metadata styles.
+"""
 function ReadStatTable(table, ext::AbstractString;
+        refpoolaslabel::Bool = true,
         vallabels::Dict{Symbol, Dict} = Dict{Symbol, Dict}(),
         hasmissing::Vector{Bool} = Vector{Bool}(),
         meta::ReadStatMeta = ReadStatMeta(),
@@ -77,9 +125,7 @@ function ReadStatTable(table, ext::AbstractString;
             colmeta.label[i] = colmetadata(table, i, "label", "")
             #! To do: handle format for DateTime columns
             colmeta.format[i] = colmetadata(table, i, "format", "")
-            #! To do: ensure that an array of type such as CategoricalArray works
-            #! Consider constructing value labels for such arrays
-            if col isa LabeledArrOrSubOrReshape
+            if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
                 type = rstype(nonmissingtype(eltype(refarray(col))))
             else
                 type = rstype(nonmissingtype(eltype(col)))
@@ -87,16 +133,9 @@ function ReadStatTable(table, ext::AbstractString;
             colmeta.type[i] = colmetadata(table, i, "type", type)
             lblname = colmetadata(table, i, "vallabel", Symbol())
             colmeta.vallabel[i] = lblname
-            if col isa LabeledArrOrSubOrReshape
-                lblname == Symbol() && (lblname = Symbol(names[i]))
-                lbls = get(vallabels, lblname, nothing)
-                if lbls === nothing
-                    vallabels[lblname] = getvaluelabels(col)
-                    colmeta.vallabel[i] = lblname
-                elseif lbls != getvaluelabels(col)
-                    error("value label name $lblname is not unique")
-                end
-            end
+            _set_vallabels!(colmeta, vallabels, lblname, refpoolaslabel, names, col, i)
+            # type may have been modified based on refarray
+            type = colmeta.type[i]
             if type === READSTAT_TYPE_STRING
                 width = _readstat_string_width(col)
             elseif type === READSTAT_TYPE_DOUBLE
@@ -114,12 +153,23 @@ function ReadStatTable(table, ext::AbstractString;
     return ReadStatTable(cols, names, vallabels, hasmissing, meta, colmeta, styles)
 end
 
+"""
+    ReadStatTable(table::ReadStatTable, ext::AbstractString; kwargs...)
+
+Construct a `ReadStatTable` from an existing `ReadStatTable`
+for a supported file format with extension `ext`.
+
+# Keywords
+- `update_width::Bool = true`: determine the storage width for each string variable by checking the actual data columns instead of any existing metadata value.
+"""
 function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         update_width::Bool = true, kwargs...)
     meta = _meta(table)
     meta.row_count = nrow(table)
     meta.var_count = ncol(table)
     colmeta = _colmeta(table)
+    vallabels = _vallabels(table)
+    names = _names(table)
     if ext != meta.file_ext
         meta.file_ext = ext
         meta.file_format_version = get(default_file_format_version, ext, -1)
@@ -127,6 +177,10 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
     end
     for i in 1:ncol(table)
         col = Tables.getcolumn(table, i)
+        lblname = colmeta.vallabel[i]
+        # PooledArray is not treated as LabeledArray here due to conflict with getindex
+        # Will be fixed after ReadStatColumns is improved for v0.3
+        _set_vallabels!(colmeta, vallabels, lblname, false, names, col, i)
         if update_width
             type = colmeta.type[i]
             if type === READSTAT_TYPE_STRING
@@ -161,7 +215,7 @@ after the writer finishes.
 
 # Supported File Formats
 - Stata: `.dta`
-- SAS: `.sas7bdat` and `.xpt` (Note: `SAS` may not recognize the produced `.sas7bdat` files due to a known limitation with `ReadStat`.)
+- SAS: `.sas7bdat` and `.xpt` (Note: SAS may not recognize the produced `.sas7bdat` files due to a known limitation with ReadStat.)
 - SPSS: `.sav` and `por`
 
 # Conversion
@@ -173,13 +227,21 @@ a data column may be written in a different type
 when the closest `ReadStat` type is not supported.
 
 For metadata, if the user-provided `table` is not a [`ReadStatTable`](@ref),
-an attempt will be made to collect
-any table-level or column-level metadata with a key
+an attempt will be made to collect table-level or column-level metadata with a key
 that matches a metadata field in [`ReadStatMeta`](@ref) or [`ReadStatColMeta`](@ref)
 via the `metadata` and `colmetadata` interface defined by `DataAPI.jl`.
 If the `table` is a [`ReadStatTable`](@ref),
 then the associated metadata will be written as long as their values
 are compatible with the format of the output file.
+Value labels associated with a [`LabeledArray`](@ref) are always preserved
+even when the name of the dictionary of value labels is not specified in metadata
+(column name will be used by default).
+If a column is of an array type that makes use of `DataAPI.refpool`
+(e.g., `CategoricalArray` and `PooledArray`),
+value labels will be generated automatically by default
+(with keyword `refpoolaslabel` set to be `true`)
+and the underlying numerical reference values instead of the values returned by `getindex`
+are written to files (with value labels attached).
 """
 function writestat(filepath, table; ext = lowercase(splitext(filepath)[2]), kwargs...)
     filepath = string(filepath)

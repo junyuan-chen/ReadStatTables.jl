@@ -19,16 +19,19 @@ function _setntasks(ncells::Integer)
     end
 end
 
+const _supported_formats_str = """
+    # Supported File Formats
+    - Stata: `.dta`
+    - SAS: `.sas7bdat` and `.xpt`
+    - SPSS: `.sav` and `por`"""
+
 """
     readstat(filepath; kwargs...)
 
 Return a [`ReadStatTable`](@ref) that collects data (including metadata)
 from a supported data file located at `filepath`.
 
-# Accepted File Extensions
-- Stata: `.dta`.
-- SAS: `.sas7bdat` and `.xpt`.
-- SPSS: `.sav` and `por`.
+$_supported_formats_str
 
 # Keywords
 - `ext = lowercase(splitext(filepath)[2])`: extension of data file for choosing the parser.
@@ -189,10 +192,7 @@ without reading the full data
 from a supported data file located at `filepath`.
 See also [`readstatallmeta`](@ref).
 
-# Accepted File Extensions
-- Stata: `.dta`.
-- SAS: `.sas7bdat` and `.xpt`.
-- SPSS: `.sav` and `por`.
+$_supported_formats_str
 
 # Keywords
 - `ext = lowercase(splitext(filepath)[2])`: extension of data file for choosing the parser.
@@ -232,10 +232,7 @@ The four returned objects are for file-level metadata,
 variable names, variable-level metadata and value labels respectively.
 See also [`readstatmeta`](@ref).
 
-# Accepted File Extensions
-- Stata: `.dta`.
-- SAS: `.sas7bdat` and `.xpt`.
-- SPSS: `.sav` and `por`.
+$_supported_formats_str
 
 # Keywords
 - `ext = lowercase(splitext(filepath)[2])`: extension of data file for choosing the parser.

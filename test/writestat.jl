@@ -1,6 +1,31 @@
 @testset "writestat conversion" begin
     @test rstype(Int64) == READSTAT_TYPE_INT32
     @test_throws ErrorException rstype(ComplexF64)
+
+    alltypes = "$(@__DIR__)/../data/alltypes.dta"
+    df = DataFrame(readstat(alltypes))
+    emptycolmetadata!(df)
+    df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
+    df[!,:vint] = PooledArray(valuelabels(df.vint))
+    tb = ReadStatTable(df, ".dta")
+    @test colmetadata(tb, :vbyte, :vallabel) == :vbyte
+    lbl = getvaluelabels(tb.vbyte)
+    @test typeof(lbl) == Dict{Union{Char, Int32}, String}
+    @test lbl[1] == "A"
+    # How missing values are handled will be changed in v0.3
+    @test lbl[2] == "missing"
+    @test colmetadata(tb, :vint, :vallabel) == :vint
+    @test getvaluelabels(tb.vint) == lbl
+
+    df = DataFrame(readstat(alltypes))
+    emptycolmetadata!(df)
+    df[!,:vint] = PooledArray(valuelabels(df.vint))
+    tb2 = ReadStatTable(df, ".dta", refpoolaslabel=false)
+    @test tb2.vint isa PooledArray
+    @test colmetadata(tb2, :vint, :vallabel) == Symbol()
+    df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
+    # CategoricalValue is not handled
+    @test_throws ErrorException ReadStatTable(df, ".dta", refpoolaslabel=false)
 end
 
 @testset "writestat dta" begin
@@ -10,15 +35,20 @@ end
     @test isequal(tb, dtype)
     df = DataFrame(dtype)
     tb2 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
-    @test all(i->isequal(getcolumn(tb2,i), getcolumn(dtype,i)), 1:ncol(tb2))
-    lbl = copy(getvaluelabels(df.vbyte))
+    @test all(i->isequal(getcolumn(tb2,i), getcolumn(dtype,i)), 1:6)
+    @test tb2.vstrL isa LabeledArray
+    @test refarray(tb2.vstrL) == refarray(dtype.vstrL)
+    lbl0 = getvaluelabels(df.vbyte)
+    lbl = copy(lbl0)
     lbl[Int32(2)] = "B"
     df[!,:vbyte] = LabeledArray(refarray(df.vbyte), lbl)
     @test_throws ErrorException writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
     emptymetadata!(df)
     emptycolmetadata!(df)
     tb3 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
-    @test all(i->isequal(getcolumn(tb3,i), getcolumn(dtype,i)), 1:ncol(tb3))
+    @test all(i->isequal(getcolumn(tb2,i), getcolumn(dtype,i)), 1:6)
+    @test tb3.vstrL isa LabeledArray
+    @test refarray(tb3.vstrL) == refarray(dtype.vstrL)
     @test colmetadata(tb3, :vbyte, :vallabel) == :vbyte
     @test colmetadata(tb3, :vfloat, :vallabel) == :vfloat
     # Change output format
@@ -33,13 +63,16 @@ end
         [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 64, 127, 128, 255, 256]
     df = DataFrame(strtype)
     tb2 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", df)
+    # PooledArray is treated as LabeledArray
+    @test all(colmetavalues(tb2, :type)[1:10].==READSTAT_TYPE_STRING)
+    @test all(colmetavalues(tb2, :type)[11:15].==READSTAT_TYPE_INT32)
     @test Int.(colmetavalues(tb2, :storage_width)) ==
-        [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 64, 127, 128, 255, 256]
-    @test all(i->isequal(getcolumn(tb2,i), getcolumn(strtype,i)), 1:ncol(tb2))
+        [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 0, 0, 0, 0, 0]
+    @test all(i->isequal(getcolumn(tb2,i), getcolumn(strtype,i)), 1:10)
     emptymetadata!(df)
     emptycolmetadata!(df)
     tb3 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", df)
-    @test all(i->isequal(getcolumn(tb3,i), getcolumn(strtype,i)), 1:ncol(tb3))
+    @test all(i->isequal(getcolumn(tb3,i), getcolumn(strtype,i)), 1:10)
 end
 
 extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]

@@ -3,11 +3,11 @@
 Welcome to the documentation site for ReadStatTables.jl!
 
 [ReadStatTables.jl](https://github.com/junyuan-chen/ReadStatTables.jl)
-is a Julia package for reading data files from Stata, SAS and SPSS into
-a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible table.
+is a Julia package for reading and writing Stata, SAS and SPSS data files with
+[Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables.[^1]
 It utilizes the [ReadStat](https://github.com/WizardMac/ReadStat) C library
 developed by [Evan Miller](https://www.evanmiller.org)
-for parsing the data files.
+for parsing and writing the data files.
 The same C library is also the backend of popular packages in other languages such as
 [pyreadstat](https://github.com/Roche/pyreadstat) for Python
 and [haven](https://github.com/tidyverse/haven) for R.
@@ -30,18 +30,19 @@ based on the benchmark results
 ReadStatTables.jl provides the following features in addition to
 wrapping the C interface of ReadStat:
 
-- Efficient data collection from ReadStat parser to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible column table `ReadStatTable`.
-- Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl).
-- Integration of value labels into data columns via a custom array type `LabeledArray`.
-- Translation of date and time values into Julia time types `Date` and `DateTime`.
+- Fast multi-threaded data collection from ReadStat parsers to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible `ReadStatTable`
+- Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
+- Integration of value labels into data columns via a custom array type `LabeledArray`
+- Translation of date and time values into Julia time types `Date` and `DateTime`
+- Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables (experimental)
 
 ## Supported File Formats
 
 ReadStatTables.jl recognizes data files with the following file extensions at this moment:
 
-- Stata: `.dta`.
-- SAS: `.sas7bdat` and `.xpt`.
-- SPSS: `.sav` and `.por`.
+- Stata: `.dta`
+- SAS: `.sas7bdat` and `.xpt`
+- SPSS: `.sav` and `.por`
 
 ## Installation
 
@@ -56,10 +57,22 @@ pkg> add ReadStatTables
 ## Known Limitations
 
 The development of ReadStatTables.jl is not fully complete.
-The main limitations are the following:
+The main limitations to be addressed are the following:
 
-- Read support of value labels for SAS files is absent.
-- All missing values are represented by a single value `missing`.[^1]
-- Write support of the file formats has not been implemented.
+- Read support for SAS value labels is temporarily absent.
+- All missing values are represented by a single value `missing`.[^2]
+- Write support for the file formats is experimental and not fully developed.
 
-[^1]: The statistical software may accept multiple values for representing missing values (e.g., `.a`, `.b`,..., `.z` in Stata). These original values can be recognized by the parser but are not integrated into the output at this moment.
+[^1]:
+
+    Development for the reading capability is temporarily prioritized over that
+    for the writing capability.
+    Implementation for the write support only started recently
+    and should be considered as experimental.
+
+[^2]:
+
+    The statistical software may accept multiple values for representing missing values
+    (e.g., `.a`, `.b`,..., `.z` in Stata).
+    These original values can be recognized by the parser
+    but are not integrated into the output at this moment.

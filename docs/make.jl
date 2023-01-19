@@ -1,6 +1,7 @@
 using Documenter
 using ReadStatTables
 using CategoricalArrays
+using PooledArrays
 
 DocMeta.setdocmeta!(ReadStatTables, :DocTestSetup, :(using ReadStatTables, CategoricalArrays))
 
