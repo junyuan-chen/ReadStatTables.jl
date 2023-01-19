@@ -36,7 +36,7 @@ end
 
 function _set_vallabels!(colmetavec, vallabels, lblname, refpoolaslabel, names, col, i)
     lbls = get(vallabels, lblname, nothing)
-    lblname == Symbol() && (lblname = Symbol(names[i]))
+    lblname === Symbol() && (lblname = Symbol(names[i]))
     if col isa LabeledArrOrSubOrReshape
         if lbls === nothing
             vallabels[lblname] = getvaluelabels(col)
