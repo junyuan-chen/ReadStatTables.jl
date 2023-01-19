@@ -134,7 +134,7 @@ function ReadStatTable(table, ext::AbstractString;
             lblname = colmetadata(table, i, "vallabel", Symbol())
             colmeta.vallabel[i] = lblname
             _set_vallabels!(colmeta, vallabels, lblname, refpoolaslabel, names, col, i)
-            # type may have be modified based on refarray
+            # type may have been modified based on refarray
             type = colmeta.type[i]
             if type === READSTAT_TYPE_STRING
                 width = _readstat_string_width(col)
@@ -179,6 +179,7 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         col = Tables.getcolumn(table, i)
         lblname = colmeta.vallabel[i]
         # PooledArray is not treated as LabeledArray here due to conflict with getindex
+        # Will be fixed after ReadStatColumns is improved for v0.3
         _set_vallabels!(colmeta, vallabels, lblname, false, names, col, i)
         if update_width
             type = colmeta.type[i]
