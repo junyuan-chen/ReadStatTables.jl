@@ -1,6 +1,6 @@
 # ReadStatTables.jl
 
-*Read data files from Stata, SAS and SPSS into Julia tables*
+*Read and write Stata, SAS and SPSS data files with Julia tables*
 
 [![CI-stable][CI-stable-img]][CI-stable-url]
 [![codecov][codecov-img]][codecov-url]
@@ -24,11 +24,11 @@
 [docs-dev-url]: https://junyuan-chen.github.io/ReadStatTables.jl/dev/
 
 [ReadStatTables.jl](https://github.com/junyuan-chen/ReadStatTables.jl)
-is a Julia package for reading data files from Stata, SAS and SPSS into
-a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible table.
+is a Julia package for reading and writing Stata, SAS and SPSS data files with
+[Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables.
 It utilizes the [ReadStat](https://github.com/WizardMac/ReadStat) C library
 developed by [Evan Miller](https://www.evanmiller.org)
-for parsing the data files.
+for parsing and writing the data files.
 The same C library is also the backend of popular packages in other languages such as
 [pyreadstat](https://github.com/Roche/pyreadstat) for Python
 and [haven](https://github.com/tidyverse/haven) for R.
@@ -41,7 +41,7 @@ based on the benchmark results
 [here](https://github.com/junyuan-chen/ReadStatTablesBenchmarks):
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/junyuan-chen/ReadStatTablesBenchmarks/main/results/stable/stata_10k_500.svg" height="240"><br>
+  <img src="https://raw.githubusercontent.com/junyuan-chen/ReadStatTablesBenchmarks/main/results/stable/stata_10k_500.svg" height="252"><br>
 </p>
 
 ## Features
@@ -49,10 +49,11 @@ based on the benchmark results
 ReadStatTables.jl provides the following features in addition to
 wrapping the C interface of ReadStat:
 
-- Efficient data collection from ReadStat parser to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible column table `ReadStatTable`
+- Fast multi-threaded data collection from ReadStat parsers to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible `ReadStatTable`
 - Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
 - Integration of value labels into data columns via a custom array type `LabeledArray`
 - Translation of date and time values into Julia time types `Date` and `DateTime`
+- Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables (experimental)
 
 ## Supported File Formats
 
@@ -74,7 +75,7 @@ pkg> add ReadStatTables
 
 ## Quick Start
 
-To load a data file located at `data/sample.dta`:
+To read a data file located at `data/sample.dta`:
 
 ```julia
 julia> using ReadStatTables
