@@ -64,10 +64,10 @@ function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable{<:Colum
 end
 
 function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable)
-    rows = Tables.rows(_columns(tb))
+    rows = Tables.rows(tb)
     schema = Tables.schema(tb)
     types = _colmeta(tb, :type)
-    write_ext(writer, Ref{IOStream}(io), length(rows))
+    write_ext(writer, Ref{IOStream}(io), nrow(tb))
     for row in rows
         _error(begin_row(writer))
         Tables.eachcolumn(schema, row) do val, i, name

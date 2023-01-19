@@ -1,6 +1,7 @@
 module ReadStatTables
 
 using CEnum: @cenum
+using DataAPI: refpool
 using Dates
 using Dates: unix2datetime
 using InlineStrings
