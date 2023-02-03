@@ -12,7 +12,7 @@ function _setntasks(ncells::Integer)
     nthd = Threads.nthreads()
     if ncells < 10_000
         return min(2, nthd)
-    elseif ncells < 1_000_000
+    elseif ncells < 4_000_000
         return min(max(nthd÷2, 2), nthd)
     else
         return nthd
@@ -107,7 +107,7 @@ function readstat(filepath;
             row_offsets = Vector{Int}(undef, ntasks)
             row_offsets[1] = row_offset
             for i in 2:ntasks
-                row_offsets[i] = row_offset + row_limits[i-1]
+                row_offsets[i] = row_offsets[i-1] + row_limits[i-1]
             end
             width_offset = isdta
             tbs = Vector{ReadStatTable{ReadStatColumns}}(undef, ntasks)
