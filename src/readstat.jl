@@ -40,6 +40,7 @@ $_supported_formats_str
 - `row_offset::Integer = 0`: skip the specified number of rows.
 - `ntasks::Union{Integer, Nothing} = nothing`: number of tasks spawned to read data file in concurrent chunks with multiple threads; with `ntasks` being `nothing` or smaller than 1, select a default value based on the size of data file and the number of threads available (`Threads.nthreads()`); not applicable to `.xpt` and `.por` files where row count is unknown from metadata.
 - `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
+- `apply_value_labels::Bool = true`: apply value labels to the associated columns.
 - `inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32`: use a fixed-width string type that can be stored inline for any string variable with width below `inlinestring_width` and `pool_width`; a non-positive value avoids using any inline string type; not recommended for SPSS files.
 - `pool_width::Integer = 64`: only attempt to use `PooledArray` for string variables with width of at least 64.
 - `pool_thres::Integer = 500`: do not use `PooledArray` for string variables if the number of unique values exceeds `pool_thres`; a non-positive value avoids using `PooledArray`.
@@ -53,6 +54,7 @@ function readstat(filepath;
         row_offset::Integer = 0,
         ntasks::Union{Integer, Nothing} = nothing,
         convert_datetime::Bool = true,
+        apply_value_labels::Bool = true,
         inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32,
         pool_width::Integer = 64,
         pool_thres::Integer = 500,
@@ -155,6 +157,7 @@ function readstat(filepath;
                 @inbounds hms[i] = hmsi
                 _pushchain!(cols, hmsi, map(x->@inbounds(_columns(x)[i]), tbs))
             end
+            apply_value_labels || fill!(cm.vallabel, Symbol())
             return ReadStatTable(cols, names, vlbls, hms, m, cm)
         end
     end
@@ -181,6 +184,7 @@ function readstat(filepath;
             end
         end
     end
+    apply_value_labels || fill!(_colmeta(tb, :vallabel), Symbol())
     return tb
 end
 

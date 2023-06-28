@@ -12,7 +12,8 @@ using SentinelArrays: SentinelVector, ChainedVector
 using StructArrays: StructVector
 using Tables
 
-import DataAPI: refarray, unwrap, nrow, ncol, metadatasupport, colmetadatasupport,
+import DataAPI: defaultarray, refarray, unwrap, nrow, ncol,
+    metadatasupport, colmetadatasupport,
     metadata, metadatakeys, metadata!, colmetadata, colmetadatakeys, colmetadata!
 import PrettyTables: compact_type_str
 import Tables: columnnames
