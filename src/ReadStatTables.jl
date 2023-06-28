@@ -61,5 +61,6 @@ include("parser.jl")
 include("readstat.jl")
 include("writer.jl")
 include("writestat.jl")
+include("precompile.jl")
 
 end
