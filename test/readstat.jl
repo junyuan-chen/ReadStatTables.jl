@@ -72,6 +72,14 @@ end
         @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
     end
 
+    df = DataFrame(d)
+    df2 = vcat(df, df)
+    @test getvaluelabels(df2.mylabl) == getvaluelabels(df.mylabl)
+    @test getvaluelabels(df2.mylabl) !== getvaluelabels(df.mylabl)
+
+    d = readstat(dta, apply_value_labels=false)
+    @test eltype(d.mylabl) == Union{Missing, Int8}
+
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
     @test isempty(colmetadata(d))

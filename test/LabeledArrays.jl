@@ -59,6 +59,10 @@ end
     @test eltype(x) == LabeledValue{Int, Union{Int,Missing}}
     @test size(x) == (6,)
     @test IndexStyle(typeof(x)) == IndexStyle(typeof(vals))
+    @test DataAPI.defaultarray(eltype(x), 1) == typeof(x)
+    x0 = typeof(x)(undef, 10)
+    @test length(x0) == 10
+    @test isempty(getvaluelabels(x0))
 
     @test x[1] === LabeledValue(1, lbls)
     @test x[Int16(1)] === LabeledValue(1, lbls)
@@ -219,14 +223,27 @@ end
     dest = similar(refarray(x1))
     copyto!(dest, x1)
     @test isequal(dest, refarray(x1))
+    d1 = similar(refarray(dest))
+    copyto!(d1, x1)
+    @test isequal(d1, x1)
     dest = similar(refarray(x1))
     copyto!(IndexLinear(), dest, IndexLinear(), x1)
     @test isequal(dest, refarray(x1))
+    d1 = similar(refarray(dest))
+    copyto!(IndexLinear(), d1, IndexLinear(), x1)
+    @test isequal(d1, x1)
     dest = similar(refarray(x1))
     copyto!(dest, 2, view(x1, 1:3))
     @test isequal(dest[2:4], view(refarray(x1), 1:3))
+    d1 = similar(refarray(dest))
+    copyto!(d1, 2, view(x1, 1:3))
+    @test isequal(d1[2:4], view(refarray(x1), 1:3))
+    dest = similar(refarray(x1))
     copyto!(dest, 2:4, 1:1, x1, 1:3, 1:1)
     @test isequal(dest[2:4], view(refarray(x1), 1:3))
+    d1 = similar(refarray(dest))
+    copyto!(d1, 2:4, 1:1, x1, 1:3, 1:1)
+    @test isequal(d1[2:4], view(refarray(x1), 1:3))
 
     x2 = collect(x)
     @test x2 == x

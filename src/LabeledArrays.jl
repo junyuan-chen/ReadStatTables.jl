@@ -218,6 +218,8 @@ struct LabeledArray{V, N, A<:AbstractArray{V, N}, K} <: AbstractArray{LabeledVal
     labels::Dict{K, String}
     LabeledArray(values::AbstractArray{V, N}, labels::Dict{K, String}) where {V, N, K} =
         new{V, N, typeof(values), K}(values, labels)
+    LabeledArray{V, N, A, K}(::UndefInitializer, dims) where {V, N, A, K} =
+        new{V, N, A, K}(A(undef, dims), Dict{K, String}())
 end
 
 """
@@ -233,6 +235,9 @@ const LabeledVector{V, A, K} = LabeledArray{V, 1, A, K}
 Alias for [`LabeledArray{V, 2, A, K}`](@ref).
 """
 const LabeledMatrix{V, A, K} = LabeledArray{V, 2, A, K}
+
+defaultarray(::Type{LabeledValue{V,K}}, N) where {V,K} =
+    LabeledArray{V, N, defaultarray(V, N), K}
 
 const LabeledArrOrSubOrReshape{V, N} = Union{LabeledArray{V, N},
     SubArray{<:Any, N, <:LabeledArray{V}}, Base.ReshapedArray{<:Any, N, <:LabeledArray{V}},
@@ -252,7 +257,7 @@ Base.@propagate_inbounds function Base.setindex!(x::LabeledArray, v, i::Int)
 end
 
 """
-    refarry(x::LabeledArray)
+    refarray(x::LabeledArray)
     refarray(x::SubArray{<:Any, <:Any, <:LabeledArray})
     refarray(x::Base.ReshapedArray{<:Any, <:Any, <:LabeledArray})
     refarray(x::SubArray{<:Any, <:Any, <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray}})
@@ -357,18 +362,51 @@ Base.copy(x::LabeledArray) = LabeledArray(copy(refarray(x)), getvaluelabels(x))
 Base.copyto!(dest::AbstractArray, src::LabeledArrOrSubOrReshape) =
     copyto!(dest, refarray(src))
 
+# dest labels are updated in case src labels are different
+_mergelbl!(dest::LabeledArrOrSubOrReshape, src::LabeledArrOrSubOrReshape) =
+    getvaluelabels(dest) === getvaluelabels(src) ||
+        merge!(getvaluelabels(dest), getvaluelabels(src))
+
+function Base.copyto!(dest::LabeledArrOrSubOrReshape, src::LabeledArrOrSubOrReshape)
+    copyto!(refarray(dest), refarray(src))
+    _mergelbl!(dest, src)
+    return dest
+end
+
 Base.copyto!(deststyle::IndexStyle, dest::AbstractArray, srcstyle::IndexStyle,
     src::LabeledArrOrSubOrReshape) =
         copyto!(deststyle, dest, srcstyle, refarray(src))
+
+function Base.copyto!(deststyle::IndexStyle, dest::LabeledArrOrSubOrReshape,
+        srcstyle::IndexStyle, src::LabeledArrOrSubOrReshape)
+    copyto!(deststyle, refarray(dest), srcstyle, refarray(src))
+    _mergelbl!(dest, src)
+    return dest
+end
 
 Base.copyto!(dest::AbstractArray, dstart::Integer, src::LabeledArrOrSubOrReshape,
     sstart::Integer, n::Integer) =
         copyto!(dest, dstart, refarray(src), sstart, n)
 
+function Base.copyto!(dest::LabeledArrOrSubOrReshape, dstart::Integer,
+        src::LabeledArrOrSubOrReshape, sstart::Integer, n::Integer)
+    copyto!(refarray(dest), dstart, refarray(src), sstart, n)
+    _mergelbl!(dest, src)
+    return dest
+end
+
 Base.copyto!(B::AbstractVecOrMat, ir_dest::AbstractRange{Int},
     jr_dest::AbstractRange{Int}, A::LabeledArrOrSubOrReshape,
     ir_src::AbstractRange{Int}, jr_src::AbstractRange{Int}) =
         copyto!(B, ir_dest, jr_dest, refarray(A), ir_src, jr_src)
+
+function Base.copyto!(B::LabeledArrOrSubOrReshape, ir_dest::AbstractRange{Int},
+        jr_dest::AbstractRange{Int}, A::LabeledArrOrSubOrReshape,
+        ir_src::AbstractRange{Int}, jr_src::AbstractRange{Int})
+    copyto!(refarray(B), ir_dest, jr_dest, refarray(A), ir_src, jr_src)
+    _mergelbl!(B, A)
+    return B
+end
 
 # Behavior of collect is nonstandard as LabeledArray instead of Array is returned
 Base.collect(x::LabeledArrOrSubOrReshape) =
