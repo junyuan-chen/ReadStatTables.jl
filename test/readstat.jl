@@ -79,6 +79,8 @@ end
 
     d = readstat(dta, apply_value_labels=false)
     @test eltype(d.mylabl) == Union{Missing, Int8}
+    d = readstat(dta, apply_value_labels=false, ntasks=2)
+    @test eltype(d.mylabl) == Int8
 
     d = readstat(dta, usecols=Int[])
     @test sprint(show, d) == "0×0 ReadStatTable"
