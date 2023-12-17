@@ -303,7 +303,7 @@ Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,N}
 end
 
 Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,N},
-        I::Vararg{<:Integer,N}) where {V,N}
+        I::Vararg{Integer,N}) where {V,N}
     val = refarray(x)[I...]
     return LabeledValue(val, getvaluelabels(x))
 end
