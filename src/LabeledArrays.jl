@@ -291,6 +291,18 @@ Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape, i::
     return LabeledValue(val, getvaluelabels(x))
 end
 
+# This avoids method ambiguity on Julia v1.11 with
+# getindex(V::SubArray{T, N, P, I, true} where {T, N, P, I<:Union{Tuple{Vararg{Real}},
+#    Tuple{AbstractUnitRange, Vararg{Any}}}}, i::AbstractUnitRange{Int64})
+Base.@propagate_inbounds function Base.getindex(x::SubArray{<:Any, N,
+        <:Union{<:LabeledArray{V},
+        <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray{V}}}, R, true},
+        I::AbstractUnitRange{Int64}) where {V,N,
+        R<:Union{Tuple{Vararg{Real}}, Tuple{AbstractUnitRange, Vararg{Any}}}}
+    val = refarray(x)[I]
+    return LabeledArray(val, getvaluelabels(x))
+end
+
 Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape, i)
     val = refarray(x)[i]
     return LabeledArray(val, getvaluelabels(x))
