@@ -85,3 +85,11 @@ function parse_datetime(col::AbstractVector, epoch::Union{DateTime,Date}, delta:
     end
     return out
 end
+
+function datetimes_to_doubles(col::AbstractVector{<:Union{Missing,DateTime}}, ext::String, format::String)
+    # TODO: make this more robust than just a double dict lookup
+    epoch, delta = dt_formats[ext][format]
+    map(col) do value
+        value === missing ? missing : (value - epoch) / delta
+    end
+end
