@@ -23,12 +23,16 @@ const sas_date_formats = [
     "MMDDYYB", "MMDDYYB10", "MMDDYYC", "MMDDYYC10", "MMDDYYD", "MMDDYYD10",
     "MMDDYYN6", "MMDDYYN8", "MMDDYYP", "MMDDYYP10", "MMDDYYS", "MMDDYYS10",
     "MONNAME", "MONTH", "WEEKDATX", "WEEKDAY", "QTR", "QTRR", "YEAR",
-    "YYMMDDB", "YYMMDDD", "YYMMDDN", "YYMMDDP", "YYMMDDS", "DAY", "DOWNAME"
+    "YYMMDDB", "YYMMDDD", "YYMMDDN", "YYMMDDP", "YYMMDDS", "DAY", "DOWNAME",
+    "E8601DA", "E8601DN"
 ]
 const sas_datetime_formats = [
-    "DATETIME", "DATETIME18", "DATETIME19",  "DATETIME20", "DATETIME21", "DATETIME22", "TOD"
+    "DATETIME", "DATETIME18", "DATETIME19",  "DATETIME20", "DATETIME21",
+    "DATETIME22", "TOD", "E8601DT", "E8601DX", "E8601DZ", "E8601LX",
 ]
-const sas_time_formats = ["TIME", "HHMM", "TIME20.3", "TIME20", "HOUR", "TIME5"]
+const sas_time_formats = [
+    "TIME", "HHMM", "TIME20.3", "TIME20", "HOUR", "TIME5", "E8601LZ", "E8601TM",
+    "E8601TX", "E8601TZ"]
 
 const sas_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
     vcat(sas_date_formats .=> ((sas_epoch_date, Day(1)),),
