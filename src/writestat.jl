@@ -22,6 +22,17 @@ const default_file_format_version = Dict{String, Int}(
     ".sav" => 2,
 )
 
+# I would assume that each file type has a format with the most accuracy, and this should be picked
+# here. However, the SAS docs mention that DATETIME only resolves to seconds but DATETIME21.2 for example
+# has two decimal places for the seconds. Maybe that needs to be revisited in this code base.
+const default_datetime_format = Dict{String, String}(
+    ".sav" => "DATETIME",
+    ".por" => "DATETIME",
+    ".sas7bdat" => "DATETIME",
+    ".xpt" => "DATETIME",
+    ".dta" => "%tc",
+)
+
 # Accepted maximum length for strings varies by the file format and version
 function _readstat_string_width(col)
     if eltype(col) <: Union{InlineString, Missing}
@@ -115,6 +126,11 @@ function ReadStatTable(table, ext::AbstractString;
         # Only used for .xpt files
         meta.table_name = metadata(table, "table_name", "")
     end
+
+    # this is just a hack so columns with DateTime values can be replaced with Float64
+    # further down, we can't modify the input table directly.
+    cols_dict = Dict{Symbol,AbstractVector}(pairs(cols))
+    
     # Assume colmeta is manually specified if the length matches
     # Otherwise, any value in colmeta is overwritten
     # The metadata interface is absent before DataFrames.jl v1.4 which requires Julia v1.6
@@ -124,7 +140,18 @@ function ReadStatTable(table, ext::AbstractString;
             col = Tables.getcolumn(cols, i)
             colmeta.label[i] = colmetadata(table, i, "label", "")
             #! To do: handle format for DateTime columns
-            colmeta.format[i] = colmetadata(table, i, "format", "")
+            if nonmissingtype(eltype(col)) === DateTime
+                # pick a default datetime format given the file extension.
+                # what should happen when there is already format metadata for that column?
+                # then we should probably use that but check that it's also correcty applicable
+                datetime_format = default_datetime_format[ext]
+                colmeta.format[i] = datetime_format
+                # overwrite the original column in the table copy with a Float64 column where
+                # the conversion depends on the datetime format we picked
+                cols_dict[names[i]] = datetimes_to_doubles(col, ext, datetime_format)
+            else
+                colmeta.format[i] = colmetadata(table, i, "format", "")
+            end
             if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
                 type = rstype(nonmissingtype(eltype(refarray(col))))
             else
@@ -150,7 +177,11 @@ function ReadStatTable(table, ext::AbstractString;
             colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
         end
     end
-    return ReadStatTable(cols, names, vallabels, hasmissing, meta, colmeta, styles)
+
+    # can't use a dict here because it loses order, but which other base Julia data structure can be used as an ordered table with integer and symbol access?
+    namedtupletable = NamedTuple(names .=> [cols_dict[n] for n in names])
+
+    return ReadStatTable(namedtupletable, names, vallabels, hasmissing, meta, colmeta, styles)
 end
 
 """
