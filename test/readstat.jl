@@ -9,19 +9,16 @@ end
     dta = "$(@__DIR__)/../data/sample.dta"
     d = readstat(dta)
     @test d isa ReadStatTable{ReadStatColumns}
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-            5×7 ReadStatTable:
-             Row │  mychar    mynum      mydate                dtime         mylabl           myord               mytime
-                 │ String3  Float64       Date?            DateTime?  Labeled{Int8}  Labeled{Int8?}             DateTime
-            ─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────
-               1 │       a      1.1  2018-05-06  2018-05-06T10:10:10           Male             low  1960-01-01T10:10:10
-               2 │       b      1.2  1880-05-06  1880-05-06T10:10:10         Female          medium  1960-01-01T23:10:10
-               3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
-               4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
-               5 │       e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
-    end
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
+        5×7 ReadStatTable:
+         Row │  mychar    mynum      mydate                dtime         mylabl           myord               mytime
+             │ String3  Float64       Date?            DateTime?  Labeled{Int8}  Labeled{Int8?}             DateTime
+        ─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────
+           1 │       a      1.1  2018-05-06  2018-05-06T10:10:10           Male             low  1960-01-01T10:10:10
+           2 │       b      1.2  1880-05-06  1880-05-06T10:10:10         Female          medium  1960-01-01T23:10:10
+           3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
+           4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
+           5 │       e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
     m = metadata(d)
     @test getvaluelabels(d, :mylabl) == d.mylabl.labels
     @test minute(m.modified_time) == 36
@@ -189,11 +186,8 @@ end
     @test eltype(dtype[6]) == String3
     @test eltype(dtype[7]) == String
     @test length(dtype[1,7]) == 114
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test eltype(dtype[8]) == Union{Date, Missing}
-        @test eltype(dtype[9]) == Union{DateTime, Missing}
-    end
+    @test eltype(dtype[8]) == Union{Date, Missing}
+    @test eltype(dtype[9]) == Union{DateTime, Missing}
     vallbls = getvaluelabels(dtype)
     @test length(vallbls) == 1
     lbls = vallbls[:testlbl]
@@ -275,19 +269,16 @@ end
 @testset "readstat sav" begin
     sav = "$(@__DIR__)/../data/sample.sav"
     d = readstat(sav)
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
-            5×7 ReadStatTable:
-             Row │ mychar    mynum               mydate                dtime            mylabl             myord               mytime
-                 │ String  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
-            ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-               1 │      a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
-               2 │      b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
-               3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
-               4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
-               5 │      e   1000.3              missing              missing              Male               low              missing"""
-    end
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
+        5×7 ReadStatTable:
+         Row │ mychar    mynum               mydate                dtime            mylabl             myord               mytime
+             │ String  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
+        ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+           1 │      a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
+           2 │      b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
+           3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
+           4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
+           5 │      e   1000.3              missing              missing              Male               low              missing"""
 
     d = readstat(sav, ntasks=3)
     @test d isa ReadStatTable{ChainedReadStatColumns}
@@ -320,19 +311,16 @@ end
 @testset "readstat por" begin
     por = "$(@__DIR__)/../data/sample.por"
     d = readstat(por)
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
-            5×7 ReadStatTable:
-             Row │ MYCHAR    MYNUM               MYDATE                DTIME            MYLABL             MYORD               MYTIME
-                 │ String  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
-            ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-               1 │      a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
-               2 │      b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
-               3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
-               4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
-               5 │      e   1000.3              missing              missing              Male               low              missing"""
-    end
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
+        5×7 ReadStatTable:
+         Row │ MYCHAR    MYNUM               MYDATE                DTIME            MYLABL             MYORD               MYTIME
+             │ String  Float64            DateTime?            DateTime?  Labeled{Float64}  Labeled{Float64}            DateTime?
+        ─────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+           1 │      a      1.1  2018-05-06T00:00:00  2018-05-06T10:10:10              Male               low  1582-10-14T10:10:10
+           2 │      b      1.2  1880-05-06T00:00:00  1880-05-06T10:10:10            Female            medium  1582-10-14T23:10:10
+           3 │      c  -1000.3  1960-01-01T00:00:00  1960-01-01T00:00:00              Male              high  1582-10-14T00:00:00
+           4 │      d     -1.4  1583-01-01T00:00:00  1583-01-01T00:00:00            Female               low  1582-10-14T16:10:10
+           5 │      e   1000.3              missing              missing              Male               low              missing"""
 
     d = readstat(por, ntasks=3)
     @test d isa ReadStatTable{ReadStatColumns}
@@ -365,19 +353,16 @@ end
 @testset "readstat sas7bdat" begin
     sas7 = "$(@__DIR__)/../data/sample.sas7bdat"
     d = readstat(sas7)
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
-            5×7 ReadStatTable:
-             Row │  mychar    mynum      mydate                dtime   mylabl    myord               mytime
-                 │ String3  Float64       Date?            DateTime?  Float64  Float64            DateTime?
-            ─────┼──────────────────────────────────────────────────────────────────────────────────────────
-               1 │       a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
-               2 │       b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
-               3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
-               4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
-               5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
-    end
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
+        5×7 ReadStatTable:
+         Row │  mychar    mynum      mydate                dtime   mylabl    myord               mytime
+             │ String3  Float64       Date?            DateTime?  Float64  Float64            DateTime?
+        ─────┼──────────────────────────────────────────────────────────────────────────────────────────
+           1 │       a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
+           2 │       b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
+           3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
+           4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
+           5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
 
     d = readstat(sas7, ntasks=3)
     @test d isa ReadStatTable{ChainedReadStatColumns}
@@ -392,13 +377,8 @@ end
     # Labels are not handled for SAS at this moment
     # ReadStat_jll.jl v1.1.8 requires Julia v1.6 or above
     # Older versions of ReadStat_jll.jl have different results for formats
-    if VERSION >= v"1.6"
-        @test colmetavalues(d, :format) ==
-            ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
-    else
-        @test colmetavalues(d, :format) ==
-            ["\$", "BEST", "YYMMDD", "DATETIME", "BEST", "BEST", "TIME"]
-    end
+    @test colmetavalues(d, :format) ==
+        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
     @test Int.(colmetavalues(d, :measure)) == zeros(7)
     @test Int.(colmetavalues(d, :alignment)) == zeros(7)
 
@@ -413,19 +393,16 @@ end
 @testset "readstat xpt" begin
     xpt = "$(@__DIR__)/../data/sample.xpt"
     d = readstat(xpt)
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
-            5×7 ReadStatTable:
-             Row │  MYCHAR    MYNUM      MYDATE                DTIME   MYLABL    MYORD               MYTIME
-                 │ String3  Float64       Date?            DateTime?  Float64  Float64            DateTime?
-            ─────┼──────────────────────────────────────────────────────────────────────────────────────────
-               1 │       a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
-               2 │       b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
-               3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
-               4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
-               5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
-    end
+    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
+        5×7 ReadStatTable:
+         Row │  MYCHAR    MYNUM      MYDATE                DTIME   MYLABL    MYORD               MYTIME
+             │ String3  Float64       Date?            DateTime?  Float64  Float64            DateTime?
+        ─────┼──────────────────────────────────────────────────────────────────────────────────────────
+           1 │       a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
+           2 │       b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
+           3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
+           4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
+           5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
 
     d = readstat(xpt, ntasks=3)
     @test d isa ReadStatTable{ReadStatColumns}

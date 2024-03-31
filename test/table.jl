@@ -112,10 +112,7 @@ end
     @test Tables.getcolumn(tb, 1) === c1
     @test getfield(getfield(tb, :columns), :double)[1] === c2
     @test isequal(Tables.getcolumn(tb, :c2).data, c2)
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test eltype(Tables.getcolumn(tb, :c2)) == Union{DateTime, Missing}
-    end
+    @test eltype(Tables.getcolumn(tb, :c2)) == Union{DateTime, Missing}
     @test columnnames(tb) == names
     @test columnnames(tb) !== names
 
@@ -124,11 +121,8 @@ end
     @test all(ismissing.(tb[[1,2],"c2"]))
     tb[2,"c2"] = 9
 
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test Tables.schema(tb) ==
-            Tables.Schema{(:c1, :c2), Tuple{Int8, Union{DateTime,Missing}}}()
-    end
+    @test Tables.schema(tb) ==
+        Tables.Schema{(:c1, :c2), Tuple{Int8, Union{DateTime,Missing}}}()
     @test Tables.columnindex(tb, 1) == 1
     @test Tables.columnindex(tb, :c1) == 1
     @test Tables.columnindex(tb, "c1") == 1
@@ -141,22 +135,19 @@ end
     @test haskey(tb, 2)
 
     @test sprint(show, tb) == "10×2 ReadStatTable"
-    # The inferred eltype for MappedArray is different on v1.6
-    if VERSION > v"1.7"
-        @test sprint(show, MIME("text/plain"), tb, context=:displaysize=>(15,80)) == """
-            10×2 ReadStatTable:
-             Row │   c1                       c2
-                 │ Int8                DateTime?
-            ─────┼───────────────────────────────
-               1 │    1                  missing
-               2 │    2  1960-01-01T00:00:00.009
-               3 │    3  1960-01-01T00:00:00.008
-              ⋮  │  ⋮               ⋮
-               8 │    8  1960-01-01T00:00:00.003
-               9 │    9  1960-01-01T00:00:00.002
-              10 │   10  1960-01-01T00:00:00.001
-                                   4 rows omitted"""
-    end
+    @test sprint(show, MIME("text/plain"), tb, context=:displaysize=>(15,80)) == """
+        10×2 ReadStatTable:
+         Row │   c1                       c2
+             │ Int8                DateTime?
+        ─────┼───────────────────────────────
+           1 │    1                  missing
+           2 │    2  1960-01-01T00:00:00.009
+           3 │    3  1960-01-01T00:00:00.008
+          ⋮  │  ⋮               ⋮
+           8 │    8  1960-01-01T00:00:00.003
+           9 │    9  1960-01-01T00:00:00.002
+          10 │   10  1960-01-01T00:00:00.001
+                               4 rows omitted"""
 
     columns = gettestcolumns(10)
     cols = ReadStatColumns()
