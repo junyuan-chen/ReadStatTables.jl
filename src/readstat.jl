@@ -39,7 +39,6 @@ $_supported_formats_str
 - `row_limit::Union{Integer, Nothing} = nothing`: restrict the total number of rows to be read; read all rows if `row_limit=nothing`.
 - `row_offset::Integer = 0`: skip the specified number of rows.
 - `ntasks::Union{Integer, Nothing} = nothing`: number of tasks spawned to read data file in concurrent chunks with multiple threads; with `ntasks` being `nothing` or smaller than 1, select a default value based on the size of data file and the number of threads available (`Threads.nthreads()`); not applicable to `.xpt` and `.por` files where row count is unknown from metadata.
-- `convert_datetime::Bool = true`: convert data from any column with a recognized date/time format to `Date` or `DateTime`.
 - `apply_value_labels::Bool = true`: apply value labels to the associated columns.
 - `inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32`: use a fixed-width string type that can be stored inline for any string variable with width below `inlinestring_width` and `pool_width`; a non-positive value avoids using any inline string type; not recommended for SPSS files.
 - `pool_width::Integer = 64`: only attempt to use `PooledArray` for string variables with width of at least 64.
@@ -53,7 +52,6 @@ function readstat(filepath;
         row_limit::Union{Integer, Nothing} = nothing,
         row_offset::Integer = 0,
         ntasks::Union{Integer, Nothing} = nothing,
-        convert_datetime::Bool = true,
         apply_value_labels::Bool = true,
         inlinestring_width::Integer = ext ∈ (".sav", ".por") ? 0 : 32,
         pool_width::Integer = 64,
@@ -126,27 +124,6 @@ function readstat(filepath;
                     tasktb = ReadStatTable(taskcols, names, vlbls, fill(false, ncols), m, cm)
                     _parse_chunk!(tasktb, filepath, parse_ext, usecols, row_limits[i],
                         row_offsets[i], pool_thres, file_encoding, handler_encoding)
-                    if convert_datetime
-                        @inbounds for j in 1:ncols
-                            format = cm.format[j]
-                            isdta && (format = first(format, 3))
-                            dtpara = get(dtformats, format, nothing)
-                            if dtpara !== nothing
-                                epoch, delta = dtpara
-                                col0 = taskcols[j]
-                                col = parse_datetime(col0, epoch, delta, _hasmissing(tasktb)[j])
-                                if epoch isa Date
-                                    push!(taskcols.date, col)
-                                    taskcols.index[j] = (8, length(taskcols.date))
-                                    empty!(col0)
-                                elseif epoch isa DateTime
-                                    push!(taskcols.time, col)
-                                    taskcols.index[j] = (9, length(taskcols.time))
-                                    empty!(col0)
-                                end
-                            end
-                        end
-                    end
                     tbs[i] = tasktb
                 end
             end
@@ -159,29 +136,6 @@ function readstat(filepath;
             end
             apply_value_labels || fill!(cm.vallabel, Symbol())
             return ReadStatTable(cols, names, vlbls, hms, m, cm)
-        end
-    end
-
-    if ntasks == 1 && convert_datetime
-        cols = _columns(tb)
-        @inbounds for i in 1:ncol(tb)
-            format = _colmeta(tb, i, :format)
-            isdta && (format = first(format, 3))
-            dtpara = get(dtformats, format, nothing)
-            if dtpara !== nothing
-                epoch, delta = dtpara
-                col0 = cols[i]
-                col = parse_datetime(col0, epoch, delta, _hasmissing(tb)[i])
-                if epoch isa Date
-                    push!(cols.date, col)
-                    cols.index[i] = (8, length(cols.date))
-                    empty!(col0)
-                elseif epoch isa DateTime
-                    push!(cols.time, col)
-                    cols.index[i] = (9, length(cols.time))
-                    empty!(col0)
-                end
-            end
         end
     end
     apply_value_labels || fill!(_colmeta(tb, :vallabel), Symbol())

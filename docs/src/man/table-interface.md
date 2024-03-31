@@ -69,7 +69,11 @@ tb[1,1]
 tb[1,:mylabl]
 tb[1,:mylabl] = 2
 tb[1,:mylabl]
+tb[1,:mydate]
+tb[1,:dtime]
 ```
 
 Notice that for data columns with value labels,
 these methods only deal with the underlying values and disregard the value labels.
+Similarly, for data columns with a date/time format,
+the numerical values instead of the converted `Date`/`DateTime` values are returned.

@@ -6,8 +6,6 @@ const Int16Column = SentinelVector{Int16, Int16, Missing, Vector{Int16}}
 const Int32Column = SentinelVector{Int32, Int32, Missing, Vector{Int32}}
 const FloatColumn = SentinelVector{Float32, Float32, Missing, Vector{Float32}}
 const DoubleColumn = SentinelVector{Float64, Float64, Missing, Vector{Float64}}
-const DateColumn = SentinelVector{Date, Date, Missing, Vector{Date}}
-const TimeColumn = SentinelVector{DateTime, DateTime, Missing, Vector{DateTime}}
 const PooledColumnVec = PooledVector{String, UInt16, Vector{UInt16}}
 const PooledColumn = Tuple{PooledColumnVec, Int}
 for sz in (3, 7, 15, 31, 63, 127, 255)
@@ -36,8 +34,6 @@ struct ReadStatColumns
     int32::Vector{Int32Column}
     float::Vector{FloatColumn}
     double::Vector{DoubleColumn}
-    date::Vector{DateColumn}
-    time::Vector{TimeColumn}
     pooled::Vector{PooledColumn}
     str3::Vector{Str3Column}
     str7::Vector{Str7Column}
@@ -48,8 +44,7 @@ struct ReadStatColumns
     str255::Vector{Str255Column}
     ReadStatColumns() = new(Tuple{Int,Int}[], StringColumn[], Int8Column[],
         Int16Column[], Int32Column[], FloatColumn[], DoubleColumn[],
-        DateColumn[], TimeColumn[], PooledColumn[],
-        Str3Column[], Str7Column[], Str15Column[], Str31Column[],
+        PooledColumn[], Str3Column[], Str7Column[], Str15Column[], Str31Column[],
         Str63Column[], Str127Column[], Str255Column[])
 end
 
@@ -57,9 +52,9 @@ end
 Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, i::Int)
     m, n = getfield(cols, 1)[i]
     Base.Cartesian.@nif(
-        17, # 16 ifs and 1 else
+        15, # 14 ifs and 1 else
         i -> m === i+1,
-        i -> @static(i+1 === 10 ? getfield(cols, m)[n][1] : getfield(cols, m)[n]),
+        i -> @static(i+1 === 8 ? getfield(cols, m)[n][1] : getfield(cols, m)[n]),
         i -> error("invalid index $m")
     )
 end
@@ -67,9 +62,9 @@ end
 Base.@propagate_inbounds function Base.getindex(cols::ReadStatColumns, r, c::Int)
     m, n = getfield(cols, 1)[c]
     Base.Cartesian.@nif(
-        17, # 16 ifs and 1 else
+        15, # 14 ifs and 1 else
         i -> m === i+1,
-        i -> @static(i+1 === 10 ? getindex(getfield(cols, m)[n][1], r) : getindex(getfield(cols, m)[n], r)),
+        i -> @static(i+1 === 8 ? getindex(getfield(cols, m)[n][1], r) : getindex(getfield(cols, m)[n], r)),
         i -> error("invalid index $m")
     )
 end
@@ -77,9 +72,9 @@ end
 Base.@propagate_inbounds function Base.setindex!(cols::ReadStatColumns, v, r::Int, c::Int)
     m, n = getfield(cols, 1)[c]
     Base.Cartesian.@nif(
-        17, # 16 ifs and 1 else
+        15, # 14 ifs and 1 else
         i -> m === i+1,
-        i -> @static(i+1 === 10 ? setindex!(getfield(cols, m)[n][1], v, r) : setindex!(getfield(cols, m)[n], v, r)),
+        i -> @static(i+1 === 8 ? setindex!(getfield(cols, m)[n][1], v, r) : setindex!(getfield(cols, m)[n], v, r)),
         i -> error("invalid index $m")
     )
 end
@@ -120,12 +115,13 @@ Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
         v = double_value(value)
         col = getfield(cols, 7)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
-    elseif m === 10
-        col, pool_thres = getfield(cols, 10)[n]
+    elseif m === 8
+        col, pool_thres = getfield(cols, 8)[n]
         if length(col.pool) < pool_thres
             v = _string(string_value(value))
             r <= length(col) ? setindex!(col, v, r) : push!(col, v)
         else
+            # Fall back to a string column without using a pool
             N = length(col)
             strcol = fill("", N)
             copyto!(strcol, 1, col, 1, r-1)
@@ -136,33 +132,33 @@ Base.@propagate_inbounds function _setvalue!(cols::ReadStatColumns,
             v = _string(string_value(value))
             r <= N ? setindex!(strcol, v, r) : push!(strcol, v)
         end
-    elseif m === 11
+    elseif m === 9
         v = _str3(string_value(value))
+        col = getfield(cols, 9)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 10
+        v = _str7(string_value(value))
+        col = getfield(cols, 10)[n]
+        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
+    elseif m === 11
+        v = _str15(string_value(value))
         col = getfield(cols, 11)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 12
-        v = _str7(string_value(value))
+        v = _str31(string_value(value))
         col = getfield(cols, 12)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 13
-        v = _str15(string_value(value))
+        v = _str63(string_value(value))
         col = getfield(cols, 13)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 14
-        v = _str31(string_value(value))
+        v = _str127(string_value(value))
         col = getfield(cols, 14)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     elseif m === 15
-        v = _str63(string_value(value))
-        col = getfield(cols, 15)[n]
-        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
-    elseif m === 16
-        v = _str127(string_value(value))
-        col = getfield(cols, 16)[n]
-        r <= length(col) ? setindex!(col, v, r) : push!(col, v)
-    elseif m === 17
         v = _str255(string_value(value))
-        col = getfield(cols, 17)[n]
+        col = getfield(cols, 15)[n]
         r <= length(col) ? setindex!(col, v, r) : push!(col, v)
     end
 end
@@ -182,27 +178,27 @@ end
         push!(getfield(cols, 6)[n], missing)
     elseif m === 7
         push!(getfield(cols, 7)[n], missing)
+    elseif m === 8
+        push!(getfield(cols, 8)[n][1], "")
+    elseif m === 9
+        push!(getfield(cols, 9)[n], String3())
     elseif m === 10
-        push!(getfield(cols, 10)[n][1], "")
+        push!(getfield(cols, 10)[n], String7())
     elseif m === 11
-        push!(getfield(cols, 11)[n], String3())
+        push!(getfield(cols, 11)[n], String15())
     elseif m === 12
-        push!(getfield(cols, 12)[n], String7())
+        push!(getfield(cols, 12)[n], String31())
     elseif m === 13
-        push!(getfield(cols, 13)[n], String15())
+        push!(getfield(cols, 13)[n], String63())
     elseif m === 14
-        push!(getfield(cols, 14)[n], String31())
+        push!(getfield(cols, 14)[n], String127())
     elseif m === 15
-        push!(getfield(cols, 15)[n], String63())
-    elseif m === 16
-        push!(getfield(cols, 16)[n], String127())
-    elseif m === 17
-        push!(getfield(cols, 17)[n], String255())
+        push!(getfield(cols, 15)[n], String255())
     end
     return nothing
 end
 
-for (i, etype) in enumerate((:String, :Int8, :Int16, :Int32, :Float, :Double, :Date, :Time, :Pooled))
+for (i, etype) in enumerate((:String, :Int8, :Int16, :Int32, :Float, :Double, :Pooled))
     coltype = Symbol(etype, :Column)
     @eval begin
         function Base.push!(cols::ReadStatColumns, v::$coltype)
@@ -218,9 +214,9 @@ for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
     coltype = Symbol(:Str, sz, :Column)
     @eval begin
         function Base.push!(cols::ReadStatColumns, v::$coltype)
-            tar = getfield(cols, $(10+i))
+            tar = getfield(cols, $(8+i))
             push!(tar, v)
-            push!(cols.index, ($(10+i), length(tar)))
+            push!(cols.index, ($(8+i), length(tar)))
             return cols
         end
     end
@@ -238,8 +234,6 @@ const _chainedcoltypes = (String => :StringColumn,
     Union{Int32, Missing} => :Int32Column,
     Union{Float32, Missing} => :FloatColumn,
     Union{Float64, Missing} => :DoubleColumn,
-    Union{Date, Missing} => :DateColumn,
-    Union{DateTime, Missing} => :TimeColumn,
     String3 => :Str3Column, String7 => :Str7Column,
     String15 => :Str15Column, String31 => :Str31Column,
     String63 => :Str63Column, String127 => :Str127Column, String255 => :Str255Column)
@@ -267,10 +261,6 @@ struct ChainedReadStatColumns
     floatnm::Vector{ChainedVector{Float32, Vector{Float32}}}
     double::Vector{ChainedDoubleColumn}
     doublenm::Vector{ChainedVector{Float64, Vector{Float64}}}
-    date::Vector{ChainedDateColumn}
-    datenm::Vector{ChainedVector{Date, Vector{Date}}}
-    time::Vector{ChainedTimeColumn}
-    timenm::Vector{ChainedVector{DateTime, Vector{DateTime}}}
     pooled::Vector{PooledColumnVec}
     str3::Vector{ChainedStr3Column}
     str7::Vector{ChainedStr7Column}
@@ -285,8 +275,6 @@ struct ChainedReadStatColumns
         ChainedInt32Column[], ChainedVector{Int32, Vector{Int32}}[],
         ChainedFloatColumn[], ChainedVector{Float32, Vector{Float32}}[],
         ChainedDoubleColumn[], ChainedVector{Float64, Vector{Float64}}[],
-        ChainedDateColumn[], ChainedVector{Date, Vector{Date}}[],
-        ChainedTimeColumn[], ChainedVector{DateTime, Vector{DateTime}}[],
         PooledColumnVec[], ChainedStr3Column[], ChainedStr7Column[],
         ChainedStr15Column[], ChainedStr31Column[], ChainedStr63Column[],
         ChainedStr127Column[], ChainedStr255Column[])
@@ -295,7 +283,7 @@ end
 Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, i::Int)
     m, n = getfield(cols, 1)[i]
     Base.Cartesian.@nif(
-        24, # 23 ifs and 1 else
+        20, # 19 ifs and 1 else
         i -> m === i+1,
         i -> getfield(cols, m)[n],
         i -> error("invalid index $m")
@@ -305,7 +293,7 @@ end
 Base.@propagate_inbounds function Base.getindex(cols::ChainedReadStatColumns, r, c::Int)
     m, n = getfield(cols, 1)[c]
     Base.Cartesian.@nif(
-        24, # 23 ifs and 1 else
+        20, # 19 ifs and 1 else
         i -> m === i+1,
         i -> getindex(getfield(cols, m)[n], r),
         i -> error("invalid index $m")
@@ -315,7 +303,7 @@ end
 Base.@propagate_inbounds function Base.setindex!(cols::ChainedReadStatColumns, v, r::Int, c::Int)
     m, n = getfield(cols, 1)[c]
     Base.Cartesian.@nif(
-        24, # 23 ifs and 1 else
+        20, # 19 ifs and 1 else
         i -> m === i+1,
         i -> setindex!(getfield(cols, m)[n], v, r),
         i -> error("invalid index $m")
@@ -351,7 +339,7 @@ function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{Int8Col
     end
 end
 
-for (i, etype) in enumerate((:Int16, :Int32, :Float, :Double, :Date, :Time))
+for (i, etype) in enumerate((:Int16, :Int32, :Float, :Double))
     coltype = Symbol(etype, :Column)
     @eval begin
         function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{$coltype})
@@ -405,9 +393,9 @@ function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{PooledC
         i0 += length(refsn)
     end
     pv = PooledArray(RefArray(refs), invpool, pool)
-    tar = getfield(cols, 17)
+    tar = getfield(cols, 13)
     push!(tar, pv)
-    push!(cols.index, (17, length(tar)))
+    push!(cols.index, (13, length(tar)))
     return cols
 end
 
@@ -425,9 +413,9 @@ for (i, sz) in enumerate((3, 7, 15, 31, 63, 127, 255))
     @eval begin
         function _pushchain!(cols::ChainedReadStatColumns, hms::Bool, vs::Vector{$coltype})
             cv = ChainedVector(vs)
-            tar = getfield(cols, $(17+i))
+            tar = getfield(cols, $(13+i))
             push!(tar, cv)
-            push!(cols.index, ($(17+i), length(tar)))
+            push!(cols.index, ($(13+i), length(tar)))
             return cols
         end
     end

@@ -10,6 +10,10 @@ gen float vfloat = 1 if _n == 1
 gen double vdouble = 1 if _n == 1
 gen str2 vstr = "ab" if _n == 1
 gen strL vstrL = "This is a long string! This is a long string! This is a long string! This is a long string! This is a long string!" if _n == 1
+gen int vdate = 1 if _n == 1
+format vdate %td
+gen double vtime = 1 if _n == 1
+format vtime %tc
 
 replace vbyte = .a if _n == 2
 replace vint = .a if _n == 2

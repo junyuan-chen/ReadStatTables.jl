@@ -74,6 +74,7 @@ Hence, it is useful for gaining fine-grained control over the content to be writ
 Metadata may be manually specified with keyword arguments.
 
 # Keywords
+- `copycols::Bool = true`: copy data columns to `ReadStatColumns`; this is required for writing columns of date/time values (that are not already represented by numeric values).
 - `refpoolaslabel::Bool = true`: generate value labels for columns of an array type that makes use of `DataAPI.refpool` (e.g., `CategoricalArray` and `PooledArray`).
 - `vallabels::Dict{Symbol, Dict} = Dict{Symbol, Dict}()`: a dictionary of all value label dictionaries indexed by their names.
 - `hasmissing::Vector{Bool} = Vector{Bool}()`: a vector of indicators for whether any missing value present in the corresponding column; irrelavent for writing tables.
@@ -82,6 +83,7 @@ Metadata may be manually specified with keyword arguments.
 - `styles::Dict{Symbol, Symbol} = _default_metastyles()`: metadata styles.
 """
 function ReadStatTable(table, ext::AbstractString;
+        copycols::Bool = true,
         refpoolaslabel::Bool = true,
         vallabels::Dict{Symbol, Dict} = Dict{Symbol, Dict}(),
         hasmissing::Vector{Bool} = Vector{Bool}(),
@@ -91,12 +93,13 @@ function ReadStatTable(table, ext::AbstractString;
         kwargs...)
     Tables.istable(table) && Tables.columnaccess(table) || throw(
         ArgumentError("table of type $(typeof(table)) is not accepted"))
-    cols = Tables.columns(table)
-    names = map(Symbol, columnnames(cols))
+    srccols = Tables.columns(table)
+    cols = copycols ? ReadStatColumns() : srccols
+    names = map(Symbol, columnnames(srccols))
     N = length(names)
     length(hasmissing) == N || (hasmissing = fill(true, N))
     # Only overide the default values for fields relevant to writer behavior
-    meta.row_count = Tables.rowcount(cols)
+    meta.row_count = Tables.rowcount(srccols)
     meta.var_count = N
     if ext != meta.file_ext
         meta.file_ext = ext
@@ -121,10 +124,31 @@ function ReadStatTable(table, ext::AbstractString;
     if length(colmeta) != N && colmetadatasupport(typeof(table)).read
         resize!(colmeta, N)
         for i in 1:N
-            col = Tables.getcolumn(cols, i)
+            col = Tables.getcolumn(srccols, i)
             colmeta.label[i] = colmetadata(table, i, "label", "")
-            #! To do: handle format for DateTime columns
-            colmeta.format[i] = colmetadata(table, i, "format", "")
+            colmeta.format[i] = format = colmetadata(table, i, "format", "")
+            # Lazily convert any Date/DateTime column
+            if eltype(col) <: Union{Date, DateTime, Missing}
+                copycols || error("to write tables with date/time columns, copycols must be true")
+                ext == ".dta" && (format = first(format, 3))
+                dtpara = get(dt_formats[ext], format, nothing)
+                if dtpara === nothing
+                    if Date <: eltype(col)
+                        epoch = ext_date_epoch[ext]
+                        delta = ext_default_date_delta[ext]
+                        colmeta.format[i] = ext_default_date_format[ext]
+                    else
+                        epoch = ext_time_epoch[ext]
+                        delta = ext_default_time_delta[ext]
+                        colmeta.format[i] = ext_default_time_format[ext]
+                    end
+                else
+                    epoch, delta = dtpara
+                    nonmissingtype(eltype(col)) == typeof(epoch) ||
+                        error("a date/datetime column must have a date/datetime format")
+                end
+                col = datetime2num(col, Num2DateTime(epoch, delta))
+            end
             if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
                 type = rstype(nonmissingtype(eltype(refarray(col))))
             else
@@ -148,6 +172,34 @@ function ReadStatTable(table, ext::AbstractString;
             colmeta.display_width[i] = max(Cint(width), Cint(9))
             colmeta.measure[i] = READSTAT_MEASURE_UNKNOWN
             colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
+            if copycols
+                M = length(col)
+                if type == READSTAT_TYPE_INT8
+                    tarcol = Vector{Union{Int8, Missing}}(undef, M)
+                elseif type == READSTAT_TYPE_INT16
+                    tarcol = SentinelVector{Int16}(undef, M, typemin(Int16), missing)
+                elseif type == READSTAT_TYPE_INT32
+                    tarcol = SentinelVector{Int32}(undef, M, typemin(Int32), missing)
+                elseif type == READSTAT_TYPE_FLOAT
+                    tarcol = SentinelVector{Float32}(undef, M)
+                elseif type == READSTAT_TYPE_DOUBLE
+                    tarcol = SentinelVector{Float64}(undef, M)
+                else # READSTAT_TYPE_STRING
+                    T = eltype(col)
+                    if T in (String3, String7, String15, String31,
+                            String63, String127, String255)
+                        tarcol = Vector{T}(undef, M)
+                    else
+                        tarcol = Vector{String}(undef, M)
+                    end
+                end
+                if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
+                    copyto!(tarcol, refarray(col))
+                else
+                    copyto!(tarcol, col)
+                end
+                push!(cols, tarcol)
+            end
         end
     end
     return ReadStatTable(cols, names, vallabels, hasmissing, meta, colmeta, styles)
@@ -176,6 +228,7 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         fill!(colmeta.format, "")
     end
     for i in 1:ncol(table)
+        # ! Assume no need to re-encode columns with date/time values
         col = Tables.getcolumn(table, i)
         lblname = colmeta.vallabel[i]
         # PooledArray is not treated as LabeledArray here due to conflict with getindex

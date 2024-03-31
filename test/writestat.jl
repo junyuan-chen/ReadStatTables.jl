@@ -16,13 +16,27 @@
     @test lbl[2] == "missing"
     @test colmetadata(tb, :vint, :vallabel) == :vint
     @test getvaluelabels(tb.vint) == lbl
+    # Date/Time columns are converted to numbers
+    @test eltype(getfield(tb, :columns)[8]) >: Float64
+    @test eltype(getfield(tb, :columns)[9]) >: Float64
 
     df = DataFrame(readstat(alltypes))
     emptycolmetadata!(df)
     df[!,:vint] = PooledArray(valuelabels(df.vint))
     tb2 = ReadStatTable(df, ".dta", refpoolaslabel=false)
-    @test tb2.vint isa PooledArray
+    @test tb2.vint isa Vector{String}
     @test colmetadata(tb2, :vint, :vallabel) == Symbol()
+    df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
+    # CategoricalValue is not handled
+    @test_throws ErrorException ReadStatTable(df, ".dta", refpoolaslabel=false)
+
+    df = DataFrame(readstat(alltypes))
+    emptycolmetadata!(df)
+    df[!,:vint] = PooledArray(valuelabels(df.vint))
+    @test_throws ErrorException ReadStatTable(df, ".dta", refpoolaslabel=false, copycols=false)
+    tb3 = ReadStatTable(df[!,1:7], ".dta", refpoolaslabel=false, copycols=false)
+    @test tb3.vint isa PooledArray
+    @test colmetadata(tb3, :vint, :vallabel) == Symbol()
     df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
     # CategoricalValue is not handled
     @test_throws ErrorException ReadStatTable(df, ".dta", refpoolaslabel=false)
@@ -83,7 +97,7 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
 
     df_full = DataFrame(rs_table)
 
-    # Drop the date/time columns as the conversion is not implemented yet
+    # Drop the date/time columns for copycols=false
     selected_cols = if ext in ["por", "xpt"]
         [:MYCHAR, :MYNUM, :MYLABL, :MYORD]
     else
@@ -92,9 +106,11 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
     df = df_full[!,selected_cols]
 
     outfile = "$(@__DIR__)/../data/sample_write_test.$ext"
-    rs_table_out = writestat(outfile, df)
+    rs_table_out = writestat(outfile, df, copycols=false)
     @test typeof(rs_table_out) == ReadStatTable{DataFrames.DataFrameColumns{DataFrame}}
-    
+    rs_table_out = writestat(outfile, df_full)
+    @test typeof(rs_table_out) == ReadStatTable{ReadStatColumns}
+
     rs_table_read_back = readstat(outfile)
 
     # check that specific table metadata is the same
@@ -115,5 +131,5 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
 
     # check that data round-tripped correctly
     df_read_back = DataFrame(rs_table_read_back)
-    @test isequal(df_read_back, df) # isequal returns true for missings and NaNs
+    @test isequal(df_read_back, df_full) # isequal returns true for missings and NaNs
 end

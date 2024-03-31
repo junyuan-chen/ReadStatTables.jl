@@ -110,7 +110,9 @@ end
     @test !isempty(tb)
 
     @test Tables.getcolumn(tb, 1) === c1
-    @test Tables.getcolumn(tb, :c2) === c2
+    @test getfield(getfield(tb, :columns), :double)[1] === c2
+    @test isequal(Tables.getcolumn(tb, :c2).data, c2)
+    @test eltype(Tables.getcolumn(tb, :c2)) == Union{DateTime, Missing}
     @test columnnames(tb) == names
     @test columnnames(tb) !== names
 
@@ -120,7 +122,7 @@ end
     tb[2,"c2"] = 9
 
     @test Tables.schema(tb) ==
-        Tables.Schema{(:c1, :c2), Tuple{Int8, Union{Float64,Missing}}}()
+        Tables.Schema{(:c1, :c2), Tuple{Int8, Union{DateTime,Missing}}}()
     @test Tables.columnindex(tb, 1) == 1
     @test Tables.columnindex(tb, :c1) == 1
     @test Tables.columnindex(tb, "c1") == 1
@@ -135,22 +137,22 @@ end
     @test sprint(show, tb) == "10×2 ReadStatTable"
     @test sprint(show, MIME("text/plain"), tb, context=:displaysize=>(15,80)) == """
         10×2 ReadStatTable:
-         Row │   c1        c2
-             │ Int8  Float64?
-        ─────┼────────────────
-           1 │    1   missing
-           2 │    2       9.0
-           3 │    3       8.0
-          ⋮  │  ⋮       ⋮
-           8 │    8       3.0
-           9 │    9       2.0
-          10 │   10       1.0
-                4 rows omitted"""
+         Row │   c1                       c2
+             │ Int8                DateTime?
+        ─────┼───────────────────────────────
+           1 │    1                  missing
+           2 │    2  1960-01-01T00:00:00.009
+           3 │    3  1960-01-01T00:00:00.008
+          ⋮  │  ⋮               ⋮
+           8 │    8  1960-01-01T00:00:00.003
+           9 │    9  1960-01-01T00:00:00.002
+          10 │   10  1960-01-01T00:00:00.001
+                               4 rows omitted"""
 
     columns = gettestcolumns(10)
     cols = ReadStatColumns()
     push!(cols, columns...)
-    N = 16
+    N = 14
     names = [Symbol("n",i) for i in 1:N]
     hms = fill(false, N)
     ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:N], fill("%tf", N),
@@ -159,12 +161,12 @@ end
         fill(READSTAT_ALIGNMENT_UNKNOWN, N)))
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:N
-        if 1 < i < 9
+        if 1 < i < 7
             @test ismissing(tb[i,i])
         end
-        if i < 3 || i > 9
+        if i < 3 || i > 7
             @test tb[i] === columns[i]
-        elseif i == 9
+        elseif i == 7
             @test tb[i] === columns[i][1]
         else
             @test tb[i] === parent(columns[i])
@@ -173,7 +175,7 @@ end
     hms = fill(true, N)
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:N
-        if i == 9
+        if i == 7
             @test tb[i] === columns[i][1]
         else
             @test tb[i] === columns[i]
@@ -181,7 +183,7 @@ end
     end
 
     columns, cols = gettestchainedcolumns(5)
-    N = 23
+    N = 19
     names = [Symbol("n",i) for i in 1:N]
     hms = fill(true, N)
     ms = StructVector{ReadStatColMeta}((["v$i" for i in 1:N], fill("%tf", N),
@@ -190,7 +192,7 @@ end
         fill(READSTAT_ALIGNMENT_UNKNOWN, N)))
     tb = ReadStatTable(cols, names, vls, hms, m, ms)
     for i in 1:N
-        if i in 2:2:14
+        if i in 2:2:10
             @test ismissing(tb[1,i])
         end
         @test tb[i] === columns[i]
@@ -199,7 +201,6 @@ end
     @test typeof(sch).parameters[2] == Tuple{String, Union{Int8, Missing}, Int8,
         Union{Int16, Missing}, Int16, Union{Int32, Missing}, Int32,
         Union{Float32, Missing}, Float32, Union{Float64, Missing}, Float64,
-        Union{Date, Missing}, Date, Union{DateTime, Missing}, DateTime,
         String, String3, String7, String15, String31, String63, String127, String255}
 end
 

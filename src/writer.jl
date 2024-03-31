@@ -55,7 +55,7 @@ function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable{<:Colum
             elseif type === READSTAT_TYPE_STRING
                 str = Base.unsafe_convert(Cstring, Base.cconvert(Cstring, val))
                 _error(insert_string_value(writer, var, str))
-            #! To do: handle string_ref and date/time
+            #! To do: handle string_ref
             end
         end
         _error(end_row(writer))

@@ -5,6 +5,7 @@ using DataAPI: refpool
 using Dates
 using Dates: unix2datetime
 using InlineStrings
+using MappedArrays: MappedArray, mappedarray
 using PooledArrays: PooledArray, PooledVector, RefArray
 using PrettyTables: pretty_table
 using ReadStat_jll
