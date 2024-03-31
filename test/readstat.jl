@@ -9,17 +9,19 @@ end
     dta = "$(@__DIR__)/../data/sample.dta"
     d = readstat(dta)
     @test d isa ReadStatTable{ReadStatColumns}
-    @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
-        5×7 ReadStatTable:
-         Row │  mychar    mynum      mydate                dtime         mylabl           myord               mytime
-             │ String3  Float64       Date?            DateTime?  Labeled{Int8}  Labeled{Int8?}             DateTime
-        ─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────
-           1 │       a      1.1  2018-05-06  2018-05-06T10:10:10           Male             low  1960-01-01T10:10:10
-           2 │       b      1.2  1880-05-06  1880-05-06T10:10:10         Female          medium  1960-01-01T23:10:10
-           3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
-           4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
-           5 │       e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
-
+    # The inferred eltype for MappedArray is different on v1.6
+    if VERSION > v"1.7"
+        @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == """
+            5×7 ReadStatTable:
+             Row │  mychar    mynum      mydate                dtime         mylabl           myord               mytime
+                 │ String3  Float64       Date?            DateTime?  Labeled{Int8}  Labeled{Int8?}             DateTime
+            ─────┼───────────────────────────────────────────────────────────────────────────────────────────────────────
+               1 │       a      1.1  2018-05-06  2018-05-06T10:10:10           Male             low  1960-01-01T10:10:10
+               2 │       b      1.2  1880-05-06  1880-05-06T10:10:10         Female          medium  1960-01-01T23:10:10
+               3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
+               4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
+               5 │       e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
+    end
     m = metadata(d)
     @test getvaluelabels(d, :mylabl) == d.mylabl.labels
     @test minute(m.modified_time) == 36
@@ -187,8 +189,11 @@ end
     @test eltype(dtype[6]) == String3
     @test eltype(dtype[7]) == String
     @test length(dtype[1,7]) == 114
-    @test eltype(dtype[8]) == Union{Date, Missing}
-    @test eltype(dtype[9]) == Union{DateTime, Missing}
+    # The inferred eltype for MappedArray is different on v1.6
+    if VERSION > v"1.7"
+        @test eltype(dtype[8]) == Union{Date, Missing}
+        @test eltype(dtype[9]) == Union{DateTime, Missing}
+    end
     vallbls = getvaluelabels(dtype)
     @test length(vallbls) == 1
     lbls = vallbls[:testlbl]
