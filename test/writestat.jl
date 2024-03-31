@@ -47,6 +47,11 @@ end
     dtype = readstat(alltypes)
     tb = writestat("$(@__DIR__)/../data/write_alltypes.dta", dtype)
     @test isequal(tb, dtype)
+    tb = writestat("$(@__DIR__)/../data/write_alltypes.dta", dtype, copycols=false)
+    @test isequal(tb, dtype)
+    tb = writestat("$(@__DIR__)/../data/write_alltypes.dta", DataFrame(dtype)[:,1:7],
+        copycols=false)
+    @test all(i->isequal(getcolumn(tb,i), getcolumn(dtype,i)), 1:6)
     df = DataFrame(dtype)
     tb2 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
     @test all(i->isequal(getcolumn(tb2,i), getcolumn(dtype,i)), 1:6)
@@ -106,6 +111,7 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
     df = df_full[!,selected_cols]
 
     outfile = "$(@__DIR__)/../data/sample_write_test.$ext"
+    @test_throws ErrorException writestat(outfile, df_full, copycols=false)
     rs_table_out = writestat(outfile, df, copycols=false)
     @test typeof(rs_table_out) == ReadStatTable{DataFrames.DataFrameColumns{DataFrame}}
     rs_table_out = writestat(outfile, df_full)
