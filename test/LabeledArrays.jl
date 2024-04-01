@@ -127,6 +127,9 @@ end
     v = reshape(x, 3, 2)[1:2]
     @test v isa LabeledArray
     @test v.labels === lbls
+    v = reshape(x, 3, 2)[1:2, 1:2]
+    @test v isa LabeledArray
+    @test v.labels === lbls
     v = view(x2, 1:3)[1:2]
     @test v isa LabeledArray
     @test v.labels === lbls

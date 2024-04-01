@@ -365,12 +365,6 @@ Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,K,
     return LabeledValue{V,K}(val, getvaluelabels(x))
 end
 
-Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,N},
-        I::Vararg{Any,N}) where {V,N}
-    val = refarray(x)[I...]
-    return LabeledArray(val, getvaluelabels(x))
-end
-
 Base.fill!(x::LabeledArrOrSubOrReshape, v) = (fill!(refarray(x), unwrap(v)); x)
 
 Base.resize!(x::LabeledVector, n::Integer) = (resize!(refarray(x), n); x)
