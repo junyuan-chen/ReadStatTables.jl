@@ -106,6 +106,19 @@ julia> tb.myord
 
 Notice that for data variables with value labels,
 both the original values and the value labels are preserved.
+For variables representing date/time,
+the translation to Julia `Date`/`DateTime` is lazy.
+One can access the underlying numerical values as follows:
+
+```julia
+julia> tb.mydate.data
+5-element SentinelArrays.SentinelVector{Float64, Float64, Missing, Vector{Float64}}:
+   21310.0
+  -29093.0
+       0.0
+ -137696.0
+        missing
+```
 
 File-level and variable-level metadata can be retrieved and modified
 via methods compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl):
