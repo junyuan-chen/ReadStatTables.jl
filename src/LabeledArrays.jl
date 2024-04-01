@@ -332,10 +332,11 @@ end
 # This avoids method ambiguity on Julia v1.11 with
 # getindex(V::SubArray{T, N, P, I, true} where {T, N, P, I<:Union{Tuple{Vararg{Real}},
 #    Tuple{AbstractUnitRange, Vararg{Any}}}}, i::AbstractUnitRange{Int64})
+# Need to restrict I to UnitRange for resolving ambiguity on v1.12?
 Base.@propagate_inbounds function Base.getindex(x::SubArray{<:Any, N,
         <:Union{<:LabeledArray{V},
         <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray{V}}}, R, true},
-        I::AbstractUnitRange{Int64}) where {V,N,
+        I::UnitRange{Int64}) where {V,N,
         R<:Union{Tuple{Vararg{Real}}, Tuple{AbstractUnitRange, Vararg{Any}}}}
     val = refarray(x)[I]
     return LabeledArray(val, getvaluelabels(x))
