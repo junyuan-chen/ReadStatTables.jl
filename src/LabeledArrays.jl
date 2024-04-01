@@ -35,6 +35,9 @@ false
 julia> v1 == 1
 true
 
+julia> isnan(v1)
+false
+
 julia> isequal(vm, missing)
 true
 
@@ -87,7 +90,14 @@ Base.isless(x::Missing, y::LabeledValue) = isless(x, y.value)
 Base.isapprox(x::LabeledValue, y; kwargs...) = isapprox(x.value, y; kwargs...)
 Base.isapprox(x, y::LabeledValue; kwargs...) = isapprox(x, y.value; kwargs...)
 
+Base.iszero(x::LabeledValue) = iszero(x.value)
+Base.isnan(x::LabeledValue) = isnan(x.value)
+Base.isinf(x::LabeledValue) = isinf(x.value)
+Base.isfinite(x::LabeledValue) = isfinite(x.value)
+
 Base.hash(x::LabeledValue, h::UInt=zero(UInt)) = hash(x.value, h)
+
+Base.length(x::LabeledValue) = length(x.value)
 
 """
     unwrap(x::LabeledValue)
@@ -115,8 +125,8 @@ Base.show(io::IO, x::LabeledValue) = print(io, _getlabel(x))
 Base.show(io::IO, ::MIME"text/plain", x::LabeledValue) =
     print(io, x.value, " => ", _getlabel(x))
 
-Base.convert(::Type{<:LabeledValue{T1}}, x::LabeledValue{T2}) where {T1,T2} =
-    LabeledValue(convert(T1, x.value), x.labels)
+Base.convert(::Type{<:LabeledValue{T1,K}}, x::LabeledValue{T2,K}) where {T1,T2,K} =
+    LabeledValue{T1,K}(convert(T1, x.value), x.labels)
 Base.convert(::Type{T}, x::LabeledValue) where T<:AbstractString = convert(T, _getlabel(x))
 
 """
@@ -151,6 +161,10 @@ Additional array methods such as `push!`, `insert!`, `deleteat!`, `append!`
 are supported for [`LabeledVector`](@ref).
 They are applied on the underlying array of values retrieved via [`refarray`](@ref)
 and do not modify the dictionary of value labels.
+
+For convenience, `LabeledArray(x::AbstractArray{<:AbstractString}, ::Type{T}=Int32)`
+converts a string array to a `LabeledArray`
+by encoding the string values with integers of the specified type (`Int32` by default).
 
 # Examples
 ```jldoctest
@@ -197,6 +211,14 @@ julia> push!(x, 2)
  2 => b
  2 => b
 
+julia> push!(x, 3 => "c")
+5-element LabeledVector{Int64, Vector{Int64}, Int64}:
+ 0 => 0
+ 1 => a
+ 2 => b
+ 2 => b
+ 3 => c
+
 julia> deleteat!(x, 4)
 3-element LabeledVector{Int64, Vector{Int64}, Int64}:
  0 => 0
@@ -211,6 +233,14 @@ julia> append!(x, [0, 1, 2])
  0 => 0
  1 => a
  2 => b
+
+julia> v = ["a", "b", "c"];
+
+julia> LabeledArray(v, Int16)
+3-element LabeledVector{Int16, Vector{Int16}, Union{Char, Int32}}:
+ 1 => a
+ 2 => b
+ 3 => c
 ```
 """
 struct LabeledArray{V, N, A<:AbstractArray{V, N}, K} <: AbstractArray{LabeledValue{V, K}, N}
@@ -220,6 +250,13 @@ struct LabeledArray{V, N, A<:AbstractArray{V, N}, K} <: AbstractArray{LabeledVal
         new{V, N, typeof(values), K}(values, labels)
     LabeledArray{V, N, A, K}(::UndefInitializer, dims) where {V, N, A, K} =
         new{V, N, A, K}(A(undef, dims), Dict{K, String}())
+end
+
+# Convenience method for encoding string arrays
+function LabeledArray(x::AbstractArray{<:AbstractString}, ::Type{T}=Int32) where T
+    refs, invpool, pool = _label(x, eltype(x), T)
+    lbls = Dict{Union{Int32,Char},String}(Int32(v)=>string(k) for (k, v) in pairs(invpool))
+    return LabeledArray(refs, lbls)
 end
 
 """
@@ -239,16 +276,16 @@ const LabeledMatrix{V, A, K} = LabeledArray{V, 2, A, K}
 defaultarray(::Type{LabeledValue{V,K}}, N) where {V,K} =
     LabeledArray{V, N, defaultarray(V, N), K}
 
-const LabeledArrOrSubOrReshape{V, N} = Union{LabeledArray{V, N},
-    SubArray{<:Any, N, <:LabeledArray{V}}, Base.ReshapedArray{<:Any, N, <:LabeledArray{V}},
-    SubArray{<:Any, N, <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray{V}}}}
+const LabeledArrOrSubOrReshape{V, K, N} = Union{LabeledArray{V, N, <:Any, K},
+    SubArray{<:Any, N, <:LabeledArray{V, <:Any, <:Any, K}}, Base.ReshapedArray{<:Any, N, <:LabeledArray{V, <:Any, <:Any, K}},
+    SubArray{<:Any, N, <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray{V, <:Any, <:Any, K}}}}
 
 Base.size(x::LabeledArray) = size(refarray(x))
 Base.IndexStyle(::Type{<:LabeledArray{V,N,A}}) where {V,N,A} = IndexStyle(A)
 
-Base.@propagate_inbounds function Base.getindex(x::LabeledArray, i::Int)
-    val = refarray(x)[i]
-    return LabeledValue(val, getvaluelabels(x))
+Base.@propagate_inbounds function Base.getindex(x::LabeledArray{V,N,A,K}, i::Int) where {V,N,A,K}
+    val = refarray(x)[i]::V
+    return LabeledValue{V,K}(val, getvaluelabels(x))
 end
 
 Base.@propagate_inbounds function Base.setindex!(x::LabeledArray, v, i::Int)
@@ -286,21 +323,29 @@ getvaluelabels(x::Base.ReshapedArray{<:Any, <:Any, <:LabeledArray}) = parent(x).
 getvaluelabels(x::SubArray{<:Any, <:Any,
     <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray}}) = parent(parent(x)).labels
 
-Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape, i::Integer)
-    val = refarray(x)[i]
-    return LabeledValue(val, getvaluelabels(x))
+# The type annotation ::V and LabeledValue{V,K} avoids an allocation
+Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,K}, i::Integer) where {V,K}
+    val = refarray(x)[i]::V
+    return LabeledValue{V,K}(val, getvaluelabels(x))
 end
 
 # This avoids method ambiguity on Julia v1.11 with
 # getindex(V::SubArray{T, N, P, I, true} where {T, N, P, I<:Union{Tuple{Vararg{Real}},
 #    Tuple{AbstractUnitRange, Vararg{Any}}}}, i::AbstractUnitRange{Int64})
+# Need to restrict I to UnitRange for resolving ambiguity on v1.12?
 Base.@propagate_inbounds function Base.getindex(x::SubArray{<:Any, N,
         <:Union{<:LabeledArray{V},
         <:Base.ReshapedArray{<:Any, <:Any, <:LabeledArray{V}}}, R, true},
-        I::AbstractUnitRange{Int64}) where {V,N,
+        I::UnitRange{Int64}) where {V,N,
         R<:Union{Tuple{Vararg{Real}}, Tuple{AbstractUnitRange, Vararg{Any}}}}
     val = refarray(x)[I]
     return LabeledArray(val, getvaluelabels(x))
+end
+
+# Needed for repeat(x, inner=2) to work
+Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,K}, i::CartesianIndex) where {V,K}
+    val = refarray(x)[i]::V
+    return LabeledValue{V,K}(val, getvaluelabels(x))
 end
 
 Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape, i)
@@ -308,29 +353,27 @@ Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape, i)
     return LabeledArray(val, getvaluelabels(x))
 end
 
-Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,N},
-        I::Vararg{Int,N}) where {V,N}
-    val = refarray(x)[I...]
-    return LabeledValue(val, getvaluelabels(x))
+Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,K,N},
+        I::Vararg{Int,N}) where {V,K,N}
+    val = refarray(x)[I...]::V
+    return LabeledValue{V,K}(val, getvaluelabels(x))
 end
 
-Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,N},
-        I::Vararg{Integer,N}) where {V,N}
-    val = refarray(x)[I...]
-    return LabeledValue(val, getvaluelabels(x))
-end
-
-Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,N},
-        I::Vararg{Any,N}) where {V,N}
-    val = refarray(x)[I...]
-    return LabeledArray(val, getvaluelabels(x))
+Base.@propagate_inbounds function Base.getindex(x::LabeledArrOrSubOrReshape{V,K,N},
+        I::Vararg{Integer,N}) where {V,K,N}
+    val = refarray(x)[I...]::V
+    return LabeledValue{V,K}(val, getvaluelabels(x))
 end
 
 Base.fill!(x::LabeledArrOrSubOrReshape, v) = (fill!(refarray(x), unwrap(v)); x)
 
 Base.resize!(x::LabeledVector, n::Integer) = (resize!(refarray(x), n); x)
 Base.push!(x::LabeledVector, v) = (push!(refarray(x), unwrap(v)); x)
+Base.push!(x::LabeledVector, p::Pair) =
+    (getvaluelabels(x)[p[1]] = p[2]; push!(refarray(x), p[1]); x)
 Base.pushfirst!(x::LabeledVector, v) = (pushfirst!(refarray(x), unwrap(v)); x)
+Base.pushfirst!(x::LabeledVector, p::Pair) =
+    (getvaluelabels(x)[p[1]] = p[2]; pushfirst!(refarray(x), p[1]); x)
 Base.insert!(x::LabeledVector, i, v) = (insert!(refarray(x), i, unwrap(v)); x)
 Base.deleteat!(x::LabeledVector, i) = (deleteat!(refarray(x), i); x)
 Base.append!(x::LabeledVector, v) = (append!(refarray(x), refarray(v)); x)
@@ -426,6 +469,9 @@ Base.collect(x::LabeledArrOrSubOrReshape) =
 
 Base.collect(::Type{<:LabeledValue{T}}, x::LabeledArrOrSubOrReshape) where T =
     LabeledArray(collect(T, refarray(x)), getvaluelabels(x))
+
+disallowmissing(x::LabeledArrOrSubOrReshape) =
+    LabeledArray(disallowmissing(refarray(x)), getvaluelabels(x))
 
 # Assume VERSION >= v"1.3.0"
 # Define abbreviated element type name for printing with PrettyTables.jl

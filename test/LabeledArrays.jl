@@ -14,6 +14,15 @@
     @test isless(v1, v2)
     @test isapprox(v1, v3)
 
+    @test !iszero(v1)
+    @test iszero(LabeledValue(0, lbls1))
+    @test !isnan(v1)
+    @test isnan(LabeledValue(NaN, lbls1))
+    @test !isinf(v1)
+    @test isinf(LabeledValue(Inf, lbls1))
+    @test isfinite(v1)
+    @test !isfinite(LabeledValue(Inf, lbls1))
+
     @test v1 == 1
     @test 1 == v1
     @test ismissing(v1 == missing)
@@ -37,6 +46,8 @@
     d = Dict{LabeledValue, Int}(v1 => 1)
     @test haskey(d, v3)
 
+    @test length(v1) == 1
+
     @test unwrap(v1) === 1
     @test valuelabel(v1) == "a"
     @test valuelabel(v4) == "missing"
@@ -46,7 +57,7 @@
     @test sprint(show, v4) == "missing"
     @test sprint(show, MIME("text/plain"), v1) == "1 => a"
 
-    v5 = convert(LabeledValue{Int16}, v1)
+    v5 = convert(LabeledValue{Int16, Int32}, v1)
     @test v5.value isa Int16
     @test v5.labels === v1.labels
     @test convert(String, v1) == "a"
@@ -60,9 +71,19 @@ end
     @test size(x) == (6,)
     @test IndexStyle(typeof(x)) == IndexStyle(typeof(vals))
     @test DataAPI.defaultarray(eltype(x), 1) == typeof(x)
+    @test length(unique(x)) == 3
+    @test typeof(repeat(x, 2)) == typeof(x)
+    @test repeat(x, 2) == LabeledArray(repeat(vals, 2), lbls)
+    @test typeof(repeat(x, inner=2, outer=2)) == typeof(x)
+    @test repeat(x, inner=2, outer=2) == LabeledArray(repeat(vals, inner=2, outer=2), lbls)
     x0 = typeof(x)(undef, 10)
     @test length(x0) == 10
     @test isempty(getvaluelabels(x0))
+
+    v = ["a", "b", "c"]
+    l = LabeledArray(v, Int16)
+    @test l == 1:3
+    @test valuelabels(l) == v
 
     @test x[1] === LabeledValue(1, lbls)
     @test x[Int16(1)] === LabeledValue(1, lbls)
@@ -106,6 +127,9 @@ end
     v = reshape(x, 3, 2)[1:2]
     @test v isa LabeledArray
     @test v.labels === lbls
+    v = reshape(x, 3, 2)[1:2, 1:2]
+    @test v isa LabeledArray
+    @test v.labels === lbls
     v = view(x2, 1:3)[1:2]
     @test v isa LabeledArray
     @test v.labels === lbls
@@ -133,11 +157,19 @@ end
     x1 = LabeledArray(vals1, lbls)
     @test isequal(x1[3], missing)
     @test isequal(x1[3], LabeledValue(missing, Dict{Any,String}()))
+    @test length(unique(vals1)) == 3
 
     @test refarray(x) === x.values
     @test refarray(view(x, [1, 3])) == 1:2
     @test refarray(reshape(x, 3, 2)) == reshape(x.values, 3, 2)
     @test refarray(view(x2, 1:3)) == x2.values[1:3]
+
+    @test_throws MethodError disallowmissing(x1)
+    @test typeof(disallowmissing(x1[1:2])) ==
+        LabeledVector{Int64, Vector{Int64}, Union{Missing, Int64}}
+
+    @test typeof(repeat(x1, 2)) == typeof(x1)
+    @test typeof(repeat(x1, inner=2)) == typeof(x1)
 
     x3 = LabeledArray(copy(vals1), lbls)
     fill!(x3, 1)
@@ -151,18 +183,24 @@ end
     @test length(v) == 7
     push!(v, 1)
     @test v[8] == 1
+    push!(v, 5=>"0")
+    @test v[end] == 5
+    @test getvaluelabels(v)[5] == "0"
     pushfirst!(v, 2)
     @test v[1] == 2
+    pushfirst!(v, 6=>"-1")
+    @test v[1] == 6
+    @test getvaluelabels(v)[6] == "-1"
     insert!(v, 3, 4)
     @test v[3] == 4
     deleteat!(v, 3)
-    @test length(v) == 9
+    @test length(v) == 11
     @test v[3] == 1
     append!(v, 1:3)
-    @test length(v) == 12
-    @test v[10:12] == 1:3
+    @test length(v) == 14
+    @test v[12:14] == 1:3
     prepend!(v, 1:3)
-    @test length(v) == 15
+    @test length(v) == 17
     @test v[1:3] == 1:3
     empty!(v)
     @test isempty(v)
