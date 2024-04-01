@@ -57,6 +57,7 @@ function _set_vallabels!(colmetavec, vallabels, lblname, refpoolaslabel, names, 
             colmetavec.vallabel[i] = lblname
         end
     end
+    return get(vallabels, lblname, nothing) # Return the labels
 end
 
 """
@@ -157,7 +158,7 @@ function ReadStatTable(table, ext::AbstractString;
             colmeta.type[i] = colmetadata(table, i, "type", type)
             lblname = colmetadata(table, i, "vallabel", Symbol())
             colmeta.vallabel[i] = lblname
-            _set_vallabels!(colmeta, vallabels, lblname, refpoolaslabel, names, col, i)
+            lbls = _set_vallabels!(colmeta, vallabels, lblname, refpoolaslabel, names, col, i)
             # type may have been modified based on refarray
             type = colmeta.type[i]
             if type === READSTAT_TYPE_STRING
@@ -169,7 +170,11 @@ function ReadStatTable(table, ext::AbstractString;
                 width = Csize_t(0)
             end
             colmeta.storage_width[i] = width
-            colmeta.display_width[i] = max(Cint(width), Cint(9))
+            if lbls === nothing
+                colmeta.display_width[i] = max(Cint(width), Cint(9))
+            else
+                colmeta.display_width[i] = max(Cint(maximum(length, values(lbls))), Cint(9))
+            end
             colmeta.measure[i] = READSTAT_MEASURE_UNKNOWN
             colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
             if copycols

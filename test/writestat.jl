@@ -19,6 +19,7 @@
     # Date/Time columns are converted to numbers
     @test eltype(getfield(tb, :columns)[8]) >: Float64
     @test eltype(getfield(tb, :columns)[9]) >: Float64
+    @test colmetadata(tb, :vstrL, "display_width") == length(df.vstrL[1])
 
     df = DataFrame(readstat(alltypes))
     emptycolmetadata!(df)
