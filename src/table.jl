@@ -255,11 +255,11 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ReadStatColumn
     elseif m === 7
         return _hasmissing(tb)[i] ? getfield(cols, 7)[n] : parent(getfield(cols, 7)[n])
     elseif m === 8
-        return _hasmissing(tb)[i] ? getfield(cols, 8)[n] : parent(getfield(cols, 8)[n])
+        return getfield(cols, 8)[n][1]
     elseif m === 9
-        return _hasmissing(tb)[i] ? getfield(cols, 9)[n] : parent(getfield(cols, 9)[n])
+        return getfield(cols, 9)[n]
     elseif m === 10
-        return getfield(cols, 10)[n][1]
+        return getfield(cols, 10)[n]
     elseif m === 11
         return getfield(cols, 11)[n]
     elseif m === 12
@@ -270,10 +270,6 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ReadStatColumn
         return getfield(cols, 14)[n]
     elseif m === 15
         return getfield(cols, 15)[n]
-    elseif m === 16
-        return getfield(cols, 16)[n]
-    elseif m === 17
-        return getfield(cols, 17)[n]
     end
 end
 
@@ -281,7 +277,7 @@ Base.@propagate_inbounds function getcolumnfast(tb::ReadStatTable{ChainedReadSta
     cols = _columns(tb)
     m, n = getfield(cols, 1)[i]
     Base.Cartesian.@nif(
-        24, # 23 ifs and 1 else
+        20, # 19 ifs and 1 else
         i -> m === i+1,
         i -> getfield(cols, i+1)[n],
         i -> error("invalid index $m")
@@ -294,13 +290,20 @@ Base.@propagate_inbounds getcolumnfast(tb::ReadStatTable, i::Int) =
 Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     lblname = _colmeta(tb, i, :vallabel)
     col = getcolumnfast(tb, i)
-    if lblname === Symbol()
-        return col
-    else
+    if lblname !== Symbol()
         # Value labels might be missing despite their name existing in metadata
         lbls = get(_vallabels(tb), lblname, nothing)
-        return lbls === nothing ? col : LabeledArray(refarray(col), lbls)
+        if lbls !== nothing
+            # Do not consider date/time in this case as only lables are displayed
+            return LabeledArray(refarray(col), lbls)
+        end
     end
+    # Construct MappedArray if format is a recognized date/time format
+    format = _colmeta(tb, i, :format)
+    ext = _meta(tb).file_ext
+    ext == ".dta" && (format = first(format, 3))
+    dtpara = get(dt_formats[ext], format, nothing)
+    return dtpara === nothing ? col : num2datetime(col, Num2DateTime(dtpara...))
 end
 
 Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, n::Symbol) =

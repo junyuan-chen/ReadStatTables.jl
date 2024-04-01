@@ -2,7 +2,7 @@
 
 Date and time values in the data files are recognized based on
 the format of each variable.
-Most data/time formats can be recognized without user intervention.[^1]
+Many data/time formats can be recognized without user intervention.[^1]
 In case certain date/time formats are not recognized,
 they can be added easily.
 
@@ -14,13 +14,52 @@ since a reference date or time point (epoch) chosen by the software.
 Therefore, knowing the reference data/time and the length of a single period
 is sufficient for uncovering the represented date/time values for a given format.
 
+If a variable is in a date/time format that can be recognized,
+the values will be displayed as Julia `Date` or `DateTime`
+when printing a `ReadStatTable`.
+Notice that the underlying numerical values are preserved
+and the conversion to the Julia `Date` or `DateTime` happens only lazily
+via a [`MappedArray`](https://github.com/JuliaArrays/MappedArrays.jl)
+when working with a `ReadStatTable`.
+
+```@repl date
+using ReadStatTables, DataFrames
+tb = readstat("data/sample.dta")
+tb.mydate
+tb.mydate.data
+colmetadata(tb, :mydate, "format")
+```
+
+The variable-level metadata key named `format` informs
+`ReadStatTable` whether the variable represents date/time
+and how the numerical values should be interpreted.
+Changing the `format` directly affects how the values are displayed,
+although the numerical values remain unchanged.
+
+```@repl date
+colmetadata!(tb, :mydate, "format", "%tm")
+tb.mydate
+colmetadata!(tb, :mydate, "format", "%8.0f")
+tb.mydate
+```
+
+Copying a `ReadStatTable` (e.g., converting to a `DataFrame`)
+may drop the underlying numerical values.
+Hence, users who wish to directly work with the underlying numerical values
+may want to preserve the `ReadStatTable` generated from the data file.
+
+```@repl date
+df = DataFrame(tb)
+df.mydate
+```
+
+In the above example, `df.mydate` only contains the `Date` values
+and the underlying numerical values are lost when constructing the `DataFrame`.
+
 The full lists of recognized date/time formats for the statistical software
 are stored as dictionary keys;
 while the associated values are tuples of reference date/time and period length.[^2]
-If a variable is in a date/time format that can be found in the dictionary,
-[`readstat`](@ref) will handle the conversion to a Julia time type
-(unless the `convert_datetime` option prevents it).
-Otherwise, if a date/time format is not found in the dictionary,
+If a date/time format is not found in the dictionary,
 no type conversion will be attempted.
 Additional formats may be added by inserting key-value pairs to the relevant dictionaries.
 
@@ -34,13 +73,6 @@ ReadStatTables.sas_dt_formats["MMDDYY"]
 ReadStatTables.spss_dt_formats["TIME"]
 ```
 
-Translation of the date/time values into a Julia time type is handled by
-`parse_datetime`, which is not exported.
-
-```@docs
-ReadStatTables.parse_datetime
-```
-
 [^1]:
 
     For Stata, all date/time formats except `%tC` and `%d` are supported.
@@ -52,6 +84,7 @@ ReadStatTables.parse_datetime
     only the `%tc` format is supported.
     The `%d` format that appears in earlier versions of Stata
     is no longer documented in recent versions.
+    For SAS and SPSS, the coverage of date/time formats might be less comprehensive.
 
 [^2]:
 

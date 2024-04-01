@@ -19,7 +19,6 @@ end
            3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00           Male            high  1960-01-01T00:00:00
            4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00         Female             low  1960-01-01T16:10:10
            5 │       e   1000.3     missing              missing           Male         missing  2000-01-01T00:00:00"""
-
     m = metadata(d)
     @test getvaluelabels(d, :mylabl) == d.mylabl.labels
     @test minute(m.modified_time) == 36
@@ -58,19 +57,17 @@ end
 
     # Metadata-related methods require DataFrames.jl v1.4 or above
     # which requires Julia v1.6 or above
-    if VERSION >= v"1.6"
-        @test metadata(df, "file_label") == "A test file"
-        @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
-        @test colmetadata(df, :mynum, "label") == "numeric"
-        @test length(colmetadatakeys(df, :mylabl)) == fieldcount(ReadStatColMeta)
+    @test metadata(df, "file_label") == "A test file"
+    @test length(metadatakeys(df)) == fieldcount(ReadStatMeta)
+    @test colmetadata(df, :mynum, "label") == "numeric"
+    @test length(colmetadatakeys(df, :mylabl)) == fieldcount(ReadStatColMeta)
 
-        metastyle!(d, "file_label", :note)
-        metastyle!(d, "label", :note)
-        df = DataFrame(d)
-        @test metadata(df, "file_label", style=true) == ("A test file", :note)
-        @test metadata(df, "modified_time", style=true)[2] == :default
-        @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
-    end
+    metastyle!(d, "file_label", :note)
+    metastyle!(d, "label", :note)
+    df = DataFrame(d)
+    @test metadata(df, "file_label", style=true) == ("A test file", :note)
+    @test metadata(df, "modified_time", style=true)[2] == :default
+    @test colmetadata(df, :mynum, "label", style=true) == ("numeric", :note)
 
     df = DataFrame(d)
     df2 = vcat(df, df)
@@ -113,7 +110,7 @@ end
     @test size(d) == (0, 3)
     @test d isa ReadStatTable{ReadStatColumns}
 
-    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, convert_datetime=true)
+    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2)
     showstr = """
         2×3 ReadStatTable:
          Row │  mychar    mynum      mydate
@@ -122,12 +119,14 @@ end
            1 │       c  -1000.3  1960-01-01
            2 │       d     -1.4  1583-01-01"""
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
-    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, ntasks=3, convert_datetime=true)
+    d = readstat(dta, usecols=1:3, row_limit=2, row_offset=2, ntasks=3)
     @test d isa ReadStatTable{ChainedReadStatColumns}
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
-    d = readstat(dta, usecols=[:dtime, :mylabl], convert_datetime=false,
+    d = readstat(dta, usecols=[:dtime, :mylabl],
         file_encoding="UTF-8", handler_encoding="UTF-8")
+    # Remove the %tc format
+    colmetadata!(d, 1, "format", "%16.0f")
     showstr = """
         5×2 ReadStatTable:
          Row │       dtime         mylabl
@@ -139,8 +138,9 @@ end
            4 │ -1.18969e13         Female
            5 │     missing           Male"""
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
-    d = readstat(dta, usecols=[:dtime, :mylabl], ntasks=3, convert_datetime=false,
+    d = readstat(dta, usecols=[:dtime, :mylabl], ntasks=3,
         file_encoding="UTF-8", handler_encoding="UTF-8")
+    colmetadata!(d, 1, "format", "%16.0f")
     @test d isa ReadStatTable{ChainedReadStatColumns}
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,120)) == showstr
 
@@ -186,6 +186,8 @@ end
     @test eltype(dtype[6]) == String3
     @test eltype(dtype[7]) == String
     @test length(dtype[1,7]) == 114
+    @test eltype(dtype[8]) == Union{Date, Missing}
+    @test eltype(dtype[9]) == Union{DateTime, Missing}
     vallbls = getvaluelabels(dtype)
     @test length(vallbls) == 1
     lbls = vallbls[:testlbl]
@@ -375,13 +377,8 @@ end
     # Labels are not handled for SAS at this moment
     # ReadStat_jll.jl v1.1.8 requires Julia v1.6 or above
     # Older versions of ReadStat_jll.jl have different results for formats
-    if VERSION >= v"1.6"
-        @test colmetavalues(d, :format) ==
-            ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
-    else
-        @test colmetavalues(d, :format) ==
-            ["\$", "BEST", "YYMMDD", "DATETIME", "BEST", "BEST", "TIME"]
-    end
+    @test colmetavalues(d, :format) ==
+        ["\$1", "BEST12", "YYMMDD10", "DATETIME", "BEST12", "BEST12", "TIME20"]
     @test Int.(colmetavalues(d, :measure)) == zeros(7)
     @test Int.(colmetavalues(d, :alignment)) == zeros(7)
 

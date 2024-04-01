@@ -64,28 +64,72 @@ const dt_formats = Dict{String, Dict}(
     ".xpt" => sas_dt_formats
 )
 
-"""
-    parse_datetime(col, epoch::Union{DateTime,Date}, delta::Period, hasmissing::Bool)
+const ext_date_epoch = Dict{String, Date}(
+    ".dta" => stata_epoch_date,
+    ".sav" => spss_epoch_time,
+    ".por" => spss_epoch_time,
+    ".sas7bdat" => sas_epoch_date,
+    ".xpt" => sas_epoch_date
+)
 
-Construct a vector of time values of type `DateTime` or `Date`
-by interpreting the elements in `col` as the number of periods passed
-since `epoch` with the length of each period being `delta`.
-Returned object is of a type acceptable by `ReadStatColumns`.
-"""
-function parse_datetime(col::AbstractVector, epoch::Union{DateTime,Date}, delta::Period,
-        hasmissing::Bool)
-    out = SentinelVector{typeof(epoch)}(undef, length(col))
-    if hasmissing
-        @inbounds for i in eachindex(col)
-            v = col[i]
-            out[i] = ismissing(v) ? missing : epoch + round(Int64, v) * delta
-        end
-    else
-        tar = parent(out)
-        @inbounds for i in eachindex(col)
-            v = col[i]
-            tar[i] = epoch + round(Int64, v) * delta
-        end
-    end
-    return out
+const ext_time_epoch = Dict{String, DateTime}(
+    ".dta" => stata_epoch_time,
+    ".sav" => spss_epoch_time,
+    ".por" => spss_epoch_time,
+    ".sas7bdat" => sas_epoch_time,
+    ".xpt" => sas_epoch_time
+)
+
+const ext_default_date_delta = Dict{String, Period}(
+    ".dta" => Day(1),
+    ".sav" => Second(1),
+    ".por" => Second(1),
+    ".sas7bdat" => Day(1),
+    ".xpt" => Day(1)
+)
+
+const ext_default_time_delta = Dict{String, Period}(
+    ".dta" => Millisecond(1),
+    ".sav" => Second(1),
+    ".por" => Second(1),
+    ".sas7bdat" => Second(1),
+    ".xpt" => Second(1)
+)
+
+const ext_default_date_format = Dict{String, String}(
+    ".dta" => "%td",
+    ".sav" => "DATE",
+    ".por" => "DATE",
+    ".sas7bdat" => "DATE",
+    ".xpt" => "DATE"
+)
+
+const ext_default_time_format = Dict{String, String}(
+    ".dta" => "%tc",
+    ".sav" => "DATETIME",
+    ".por" => "DATETIME",
+    ".sas7bdat" => "DATETIME",
+    ".xpt" => "DATETIME"
+)
+
+struct Num2DateTime{DT<:Union{DateTime, Date}, P<:Period}
+    epoch::DT
+    delta::P
 end
+
+(NDT::Num2DateTime{DT, P})(num) where {DT, P} =
+    ismissing(num) ? num : NDT.epoch + num * NDT.delta
+
+struct DateTime2Num{NDT<:Num2DateTime}
+    ndt::NDT
+end
+
+(DTN::DateTime2Num{Num2DateTime{DT, P}})(dt) where {DT, P} =
+    ismissing(dt) ? dt : (dt - DTN.ndt.epoch) / DTN.ndt.delta
+
+num2datetime(col::AbstractVector, ndt::Num2DateTime) =
+    mappedarray(ndt, DateTime2Num{typeof(ndt)}(ndt), col)
+
+datetime2num(col::AbstractVector, ndt::Num2DateTime) =
+    mappedarray(DateTime2Num{typeof(ndt)}(ndt), ndt, col)
+

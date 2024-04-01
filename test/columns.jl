@@ -5,8 +5,6 @@ function gettestcolumns(N::Int)
     int32col = SentinelVector{Int32}(undef, N)
     floatcol = SentinelVector{Float32}(undef, N)
     doublecol = SentinelVector{Float64}(undef, N)
-    datecol = SentinelVector{Date}(undef, N)
-    timecol = SentinelVector{DateTime}(undef, N)
     pooledcol = (PooledArray(fill("", N), UInt16), 100)
     str3col = fill(String3(), N)
     str7col = fill(String7(), N)
@@ -15,7 +13,7 @@ function gettestcolumns(N::Int)
     str63col = fill(String63(), N)
     str127col = fill(String127(), N)
     str255col = fill(String255(), N)
-    return (strcol, int8col, int16col, int32col, floatcol, doublecol, datecol, timecol,
+    return (strcol, int8col, int16col, int32col, floatcol, doublecol,
         pooledcol, str3col, str7col, str15col, str31col, str63col, str127col, str255col)
 end
 
@@ -28,24 +26,24 @@ end
 
     columns = gettestcolumns(10)
     push!(cols, columns...)
-    @test size(cols) == (10, 16)
-    @test length(cols) == 16
-    @test cols.index == [(n, 1) for n in 2:17]
+    @test size(cols) == (10, 14)
+    @test length(cols) == 14
+    @test cols.index == [(n, 1) for n in 2:15]
     for (i, col) in enumerate(columns)
-        if i == 9
+        if i == 7
             @test cols[i] === col[1]
         else
             @test cols[i] === col
         end
     end
-    @test sprint(show, cols) == "10×16 ReadStatColumns"
+    @test sprint(show, cols) == "10×14 ReadStatColumns"
 
-    vals = ["a", Int8(1), Int16(1), Int32(1), Float32(1), Float64(1), Date(1), DateTime(1),
+    vals = ["a", Int8(1), Int16(1), Int32(1), Float32(1), Float64(1),
         ("a" for _ in 1:8)...]
     for (i, (v, col)) in enumerate(zip(vals, columns))
         cols[1,i] = v
         @test cols[1,i] == v
-        if i > 1 && i < 9
+        if i > 1 && i < 7
             cols[1,i] = missing
             @test ismissing(cols[1,i])
         end
@@ -60,13 +58,13 @@ end
         end
     end
 
-    for i in 9:16
+    for i in 7:14
         _pushmissing!(cols, i)
         @test cols[11,i] == ""
     end
 
     @test iterate(cols) === (cols[1], 2)
-    @test iterate(cols, 17) === nothing
+    @test iterate(cols, 15) === nothing
 end
 
 function gettestchainedcolumns(N::Int)
@@ -86,12 +84,6 @@ function gettestchainedcolumns(N::Int)
     doublecol = SentinelVector{Float64}(undef, N)
     doublecol = ChainedVector([doublecol, doublecol])
     doublenmcol = ChainedVector([fill(Float64(1), N), fill(Float64(1), N)])
-    datecol = SentinelVector{Date}(undef, N)
-    datecol = ChainedVector([datecol, datecol])
-    datenmcol = ChainedVector([fill(Date(1), N), fill(Date(1), N)])
-    timecol = SentinelVector{DateTime}(undef, N)
-    timecol = ChainedVector([timecol, timecol])
-    timenmcol = ChainedVector([fill(DateTime(1), N), fill(DateTime(1), N)])
     pooledcol = PooledArray(fill("", 2*N), UInt16)
     str3col = ChainedVector([fill(String3(), N), fill(String3(), N)])
     str7col = ChainedVector([fill(String7(), N), fill(String7(), N)])
@@ -101,7 +93,7 @@ function gettestchainedcolumns(N::Int)
     str127col = ChainedVector([fill(String127(), N), fill(String127(), N)])
     str255col = ChainedVector([fill(String255(), N), fill(String255(), N)])
     columns = (strcol, int8col, int8nmcol, int16col, int16nmcol, int32col, int32nmcol,
-        floatcol, floatnmcol, doublecol, doublenmcol, datecol, datenmcol, timecol, timenmcol,
+        floatcol, floatnmcol, doublecol, doublenmcol,
         pooledcol, str3col, str7col, str15col, str31col, str63col, str127col, str255col)
     cols = ChainedReadStatColumns()
     for i in 1:length(columns)
@@ -121,7 +113,7 @@ end
     columns1 = gettestcolumns(5)
     columns2 = gettestcolumns(5)
     for (i, (col1, col2)) in enumerate(zip(columns1, columns2))
-        if i == 9
+        if i == 7
             _pushchain!(cols, true, [col1[1], col2[1]])
         else
             _pushchain!(cols, true, [col1, col2])
@@ -130,47 +122,38 @@ end
             fill!(col1, 1)
             fill!(col2, 1)
             _pushchain!(cols, false, [col1, col2])
-        elseif i == 7
-            fill!(col1, Date(1))
-            fill!(col2, Date(1))
-            _pushchain!(cols, false, [col1, col2])
-        elseif i == 8
-            fill!(col1, DateTime(1))
-            fill!(col2, DateTime(1))
-            _pushchain!(cols, false, [col1, col2])
         end
     end
-    _pushchain!(cols, false, [columns1[9][1], columns1[1]])
-    @test size(cols) == (10, 24)
-    @test length(cols) == 24
-    @test cols.index == [((n, 1) for n in 2:24)..., (2, 2)]
+    _pushchain!(cols, false, [columns1[7][1], columns1[1]])
+    @test size(cols) == (10, 20)
+    @test length(cols) == 20
+    @test cols.index == [((n, 1) for n in 2:20)..., (2, 2)]
 
     pv1 = PooledArray(fill("a", 3), UInt16)
     pv2 = PooledArray(fill("b", 3), UInt16)
     _pushchain!(cols, false, [pv1, pv2])
-    @test cols[25].refs == vcat(fill(UInt16(1), 3), fill(UInt16(2), 3))
-    @test cols[25].pool == ["a", "b"]
+    @test cols[21].refs == vcat(fill(UInt16(1), 3), fill(UInt16(2), 3))
+    @test cols[21].pool == ["a", "b"]
     _pushchain!(cols, false, [pv1])
-    @test cols[26] == pv1
+    @test cols[22] == pv1
 
     columns, cols = gettestchainedcolumns(5)
     for (i, col) in enumerate(columns)
         @test cols[i] === col
     end
-    @test sprint(show, cols) == "10×23 ChainedReadStatColumns"
+    @test sprint(show, cols) == "10×19 ChainedReadStatColumns"
 
     vals = ["a", Int8(1), Int8(1), Int16(1), Int16(1), Int32(1), Int32(1),
-        Float32(1), Float32(1), Float64(1), Float64(1), Date(1), Date(1),
-        DateTime(1), DateTime(1), ("a" for _ in 1:8)...]
+        Float32(1), Float32(1), Float64(1), Float64(1), ("a" for _ in 1:8)...]
     for (i, v) in enumerate(vals)
         cols[1,i] = v
         @test cols[1,i] == v
-        if i in 2:2:14
+        if i in 2:2:10
             cols[1,i] = missing
             @test ismissing(cols[1,i])
         end
     end
 
     @test iterate(cols) === (cols[1], 2)
-    @test iterate(cols, 24) === nothing
+    @test iterate(cols, 20) === nothing
 end
