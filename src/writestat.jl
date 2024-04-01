@@ -96,7 +96,7 @@ function ReadStatTable(table, ext::AbstractString;
         ArgumentError("table of type $(typeof(table)) is not accepted"))
     srccols = Tables.columns(table)
     cols = copycols ? ReadStatColumns() : srccols
-    names = map(Symbol, columnnames(srccols))
+    names = Symbol[columnnames(srccols)...]
     N = length(names)
     length(hasmissing) == N || (hasmissing = fill(true, N))
     # Only overide the default values for fields relevant to writer behavior
