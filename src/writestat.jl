@@ -14,9 +14,6 @@ rstype(::Type{Float32}) = READSTAT_TYPE_FLOAT
 rstype(::Type{<:Real}) = READSTAT_TYPE_DOUBLE
 rstype(::Type{<:AbstractString}) = READSTAT_TYPE_STRING
 rstype(type) = error("element type $type is not supported")
-# Work around for the different eltype of MappedArray on older Julia versions
-rstype(::Type{Union{T, Date}}) where T<:Real = rstype(T)
-rstype(::Type{Union{T, DateTime}}) where T<:Real = rstype(T)
 
 # Stata .dta format before version 118 does not support Unicode for string variables
 const default_file_format_version = Dict{String, Int}(
