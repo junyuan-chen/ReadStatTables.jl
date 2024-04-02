@@ -80,8 +80,10 @@ Metadata may be manually specified with keyword arguments.
 - `vallabels::Dict{Symbol, Dict} = Dict{Symbol, Dict}()`: a dictionary of all value label dictionaries indexed by their names.
 - `hasmissing::Vector{Bool} = Vector{Bool}()`: a vector of indicators for whether any missing value present in the corresponding column; irrelavent for writing tables.
 - `meta::ReadStatMeta = ReadStatMeta()`: file-level metadata.
-- `colmeta::ColMetaVec = ReadStatColMetaVec()`: variable-level metadata stored in a `StructArray` of `ReadStatColMeta`s; only used when its length matches the number of columns in `table`.
+- `colmeta::ColMetaVec = ReadStatColMetaVec()`: variable-level metadata stored in a `StructArray` of `ReadStatColMeta`s; values are always overwritten.
+- `varformat::Union{Dict{Symbol,String}, Nothing} = nothing`: specify variable-level format for certain variables with the key being the variable name (as `Symbol`) and value being the format string.
 - `styles::Dict{Symbol, Symbol} = _default_metastyles()`: metadata styles.
+- `maxdispwidth::Integer = 60`: maximum `display_width` set for any variable.
 """
 function ReadStatTable(table, ext::AbstractString;
         copycols::Bool = true,
@@ -90,10 +92,14 @@ function ReadStatTable(table, ext::AbstractString;
         hasmissing::Vector{Bool} = Vector{Bool}(),
         meta::ReadStatMeta = ReadStatMeta(),
         colmeta::ColMetaVec = ReadStatColMetaVec(),
+        varformat::Union{Dict{Symbol,String}, Nothing} = nothing,
         styles::Dict{Symbol, Symbol} = _default_metastyles(),
+        maxdispwidth::Integer = 60,
         kwargs...)
     Tables.istable(table) && Tables.columnaccess(table) || throw(
         ArgumentError("table of type $(typeof(table)) is not accepted"))
+    colmetadatasupport(typeof(table)).read ||
+        error("Require a table type that supports reading column-level metadata")
     srccols = Tables.columns(table)
     cols = copycols ? ReadStatColumns() : srccols
     names = Symbol[columnnames(srccols)...]
@@ -119,92 +125,96 @@ function ReadStatTable(table, ext::AbstractString;
         # Only used for .xpt files
         meta.table_name = metadata(table, "table_name", "")
     end
-    # Assume colmeta is manually specified if the length matches
-    # Otherwise, any value in colmeta is overwritten
-    # The metadata interface is absent before DataFrames.jl v1.4 which requires Julia v1.6
-    if length(colmeta) != N && colmetadatasupport(typeof(table)).read
-        resize!(colmeta, N)
-        for i in 1:N
-            col = Tables.getcolumn(srccols, i)
-            colmeta.label[i] = colmetadata(table, i, "label", "")
-            colmeta.format[i] = format = colmetadata(table, i, "format", "")
-            # Lazily convert any Date/DateTime column
-            if eltype(col) <: Union{Date, DateTime, Missing}
-                copycols || error("to write tables with date/time columns, copycols must be true")
-                ext == ".dta" && (format = first(format, 3))
-                dtpara = get(dt_formats[ext], format, nothing)
-                if dtpara === nothing
-                    if Date <: eltype(col)
-                        epoch = ext_date_epoch[ext]
-                        delta = ext_default_date_delta[ext]
-                        colmeta.format[i] = ext_default_date_format[ext]
-                    else
-                        epoch = ext_time_epoch[ext]
-                        delta = ext_default_time_delta[ext]
-                        colmeta.format[i] = ext_default_time_format[ext]
-                    end
+    # Any value in colmeta is overwritten
+    length(colmeta) == N || resize!(colmeta, N)
+    for i in 1:N
+        col = Tables.getcolumn(srccols, i)
+        colmeta.label[i] = colmetadata(table, i, "label", "")
+        colmeta.format[i] = format = colmetadata(table, i, "format", "")
+        # Override the format with any value set by varformat
+        if varformat !== nothing
+            mformat = get(varformat, names[i], nothing)
+            if mformat !== nothing
+                colmeta.format[i] = format = mformat
+            end
+        end
+        # Lazily convert any Date/DateTime column
+        if eltype(col) <: Union{Date, DateTime, Missing}
+            copycols || error("to write tables with date/time columns, copycols must be true")
+            ext == ".dta" && (format = first(format, 3))
+            dtpara = get(dt_formats[ext], format, nothing)
+            if dtpara === nothing
+                if Date <: eltype(col)
+                    epoch = ext_date_epoch[ext]
+                    delta = ext_default_date_delta[ext]
+                    colmeta.format[i] = ext_default_date_format[ext]
                 else
-                    epoch, delta = dtpara
-                    nonmissingtype(eltype(col)) == typeof(epoch) ||
-                        error("a date/datetime column must have a date/datetime format")
+                    epoch = ext_time_epoch[ext]
+                    delta = ext_default_time_delta[ext]
+                    colmeta.format[i] = ext_default_time_format[ext]
                 end
-                col = datetime2num(col, Num2DateTime(epoch, delta))
+            else
+                epoch, delta = dtpara
+                nonmissingtype(eltype(col)) == typeof(epoch) ||
+                    error("a date/datetime column must have a date/datetime format")
+            end
+            col = datetime2num(col, Num2DateTime(epoch, delta))
+        end
+        if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
+            type = rstype(nonmissingtype(eltype(refarray(col))))
+        else
+            type = rstype(nonmissingtype(eltype(col)))
+        end
+        colmeta.type[i] = colmetadata(table, i, "type", type)
+        lblname = colmetadata(table, i, "vallabel", Symbol())
+        colmeta.vallabel[i] = lblname
+        lbls = _set_vallabels!(colmeta, vallabels, lblname, refpoolaslabel, names, col, i)
+        # type may have been modified based on refarray
+        type = colmeta.type[i]
+        if type === READSTAT_TYPE_STRING
+            width = _readstat_string_width(col)
+        elseif type === READSTAT_TYPE_DOUBLE
+            # Only needed for .xpt files
+            width = Csize_t(8)
+        else
+            width = Csize_t(0)
+        end
+        colmeta.storage_width[i] = width
+        if lbls === nothing
+            colmeta.display_width[i] = max(min(Cint(width), Cint(maxdispwidth)), Cint(9))
+        else
+            colmeta.display_width[i] =
+                max(min(Cint(maximum(length, values(lbls))), Cint(maxdispwidth)), Cint(9))
+        end
+        colmeta.measure[i] = READSTAT_MEASURE_UNKNOWN
+        colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
+        if copycols
+            M = length(col)
+            if type == READSTAT_TYPE_INT8
+                tarcol = Vector{Union{Int8, Missing}}(undef, M)
+            elseif type == READSTAT_TYPE_INT16
+                tarcol = SentinelVector{Int16}(undef, M, typemin(Int16), missing)
+            elseif type == READSTAT_TYPE_INT32
+                tarcol = SentinelVector{Int32}(undef, M, typemin(Int32), missing)
+            elseif type == READSTAT_TYPE_FLOAT
+                tarcol = SentinelVector{Float32}(undef, M)
+            elseif type == READSTAT_TYPE_DOUBLE
+                tarcol = SentinelVector{Float64}(undef, M)
+            else # READSTAT_TYPE_STRING
+                T = eltype(col)
+                if T in (String3, String7, String15, String31,
+                        String63, String127, String255)
+                    tarcol = Vector{T}(undef, M)
+                else
+                    tarcol = Vector{String}(undef, M)
+                end
             end
             if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
-                type = rstype(nonmissingtype(eltype(refarray(col))))
+                copyto!(tarcol, refarray(col))
             else
-                type = rstype(nonmissingtype(eltype(col)))
+                copyto!(tarcol, col)
             end
-            colmeta.type[i] = colmetadata(table, i, "type", type)
-            lblname = colmetadata(table, i, "vallabel", Symbol())
-            colmeta.vallabel[i] = lblname
-            lbls = _set_vallabels!(colmeta, vallabels, lblname, refpoolaslabel, names, col, i)
-            # type may have been modified based on refarray
-            type = colmeta.type[i]
-            if type === READSTAT_TYPE_STRING
-                width = _readstat_string_width(col)
-            elseif type === READSTAT_TYPE_DOUBLE
-                # Only needed for .xpt files
-                width = Csize_t(8)
-            else
-                width = Csize_t(0)
-            end
-            colmeta.storage_width[i] = width
-            if lbls === nothing
-                colmeta.display_width[i] = max(Cint(width), Cint(9))
-            else
-                colmeta.display_width[i] = max(Cint(maximum(length, values(lbls))), Cint(9))
-            end
-            colmeta.measure[i] = READSTAT_MEASURE_UNKNOWN
-            colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
-            if copycols
-                M = length(col)
-                if type == READSTAT_TYPE_INT8
-                    tarcol = Vector{Union{Int8, Missing}}(undef, M)
-                elseif type == READSTAT_TYPE_INT16
-                    tarcol = SentinelVector{Int16}(undef, M, typemin(Int16), missing)
-                elseif type == READSTAT_TYPE_INT32
-                    tarcol = SentinelVector{Int32}(undef, M, typemin(Int32), missing)
-                elseif type == READSTAT_TYPE_FLOAT
-                    tarcol = SentinelVector{Float32}(undef, M)
-                elseif type == READSTAT_TYPE_DOUBLE
-                    tarcol = SentinelVector{Float64}(undef, M)
-                else # READSTAT_TYPE_STRING
-                    T = eltype(col)
-                    if T in (String3, String7, String15, String31,
-                            String63, String127, String255)
-                        tarcol = Vector{T}(undef, M)
-                    else
-                        tarcol = Vector{String}(undef, M)
-                    end
-                end
-                if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
-                    copyto!(tarcol, refarray(col))
-                else
-                    copyto!(tarcol, col)
-                end
-                push!(cols, tarcol)
-            end
+            push!(cols, tarcol)
         end
     end
     return ReadStatTable(cols, names, vallabels, hasmissing, meta, colmeta, styles)

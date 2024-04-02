@@ -124,8 +124,23 @@ struct DateTime2Num{NDT<:Num2DateTime}
     ndt::NDT
 end
 
-(DTN::DateTime2Num{Num2DateTime{DT, P}})(dt) where {DT, P} =
+# Take divisions when delta is a Millisecond or Second
+(DTN::DateTime2Num{<:Num2DateTime{<:Any, <:Union{Millisecond, Second}}})(dt) =
     ismissing(dt) ? dt : (dt - DTN.ndt.epoch) / DTN.ndt.delta
+
+# Use integers for all other types of delta
+# Division can result in type promotion error for some types
+function (DTN::DateTime2Num{Num2DateTime{DT, P}})(dt) where {DT, P}
+    if ismissing(dt)
+        return dt
+    elseif dt > DTN.ndt.epoch
+        return max(length(DTN.ndt.epoch:DTN.ndt.delta:dt) - 1, 0)
+    elseif dt < DTN.ndt.epoch
+        return - max(length(dt:DTN.ndt.delta:DTN.ndt.epoch) - 1, 0)
+    else
+        return 0
+    end
+end
 
 num2datetime(col::AbstractVector, ndt::Num2DateTime) =
     mappedarray(ndt, DateTime2Num{typeof(ndt)}(ndt), col)

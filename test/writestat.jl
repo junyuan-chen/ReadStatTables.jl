@@ -7,7 +7,7 @@
     emptycolmetadata!(df)
     df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
     df[!,:vint] = PooledArray(valuelabels(df.vint))
-    tb = ReadStatTable(df, ".dta")
+    tb = ReadStatTable(df, ".dta", maxdispwidth=70)
     @test colmetadata(tb, :vbyte, :vallabel) == :vbyte
     lbl = getvaluelabels(tb.vbyte)
     @test typeof(lbl) == Dict{Union{Char, Int32}, String}
@@ -17,9 +17,9 @@
     @test colmetadata(tb, :vint, :vallabel) == :vint
     @test getvaluelabels(tb.vint) == lbl
     # Date/Time columns are converted to numbers
-    @test eltype(getfield(tb, :columns)[8]) >: Float64
+    @test eltype(getfield(tb, :columns)[8]) >: Int32
     @test eltype(getfield(tb, :columns)[9]) >: Float64
-    @test colmetadata(tb, :vstrL, "display_width") == length(df.vstrL[1])
+    @test colmetadata(tb, :vstrL, "display_width") == 70
 
     df = DataFrame(readstat(alltypes))
     emptycolmetadata!(df)
@@ -41,6 +41,22 @@
     df[!,:vbyte] = CategoricalArray(valuelabels(df.vbyte))
     # CategoricalValue is not handled
     @test_throws ErrorException ReadStatTable(df, ".dta", refpoolaslabel=false)
+end
+
+@testset "writestat format" begin
+    alltypes = "$(@__DIR__)/../data/alltypes.dta"
+    df = DataFrame(readstat(alltypes))
+    emptycolmetadata!(df)
+    df.vdate[2] = Date(1959, 12, 1)
+    df.vdate[3] = Date(1960, 1, 1)
+    tb = ReadStatTable(df, ".dta", varformat=Dict(:vdate=>"%tm"))
+    @test colmetadata(tb, :vdate, "format") == "%tm"
+    @test tb.vdate.data == [0, -1, 0]
+    df.vdate[1] = Date(1960, 2, 1)
+    df.vdate[2] = Date(1959, 12, 2)
+    df.vdate[3] = Date(1960, 1, 31)
+    tb = ReadStatTable(df, ".dta", varformat=Dict(:vdate=>"%tm"))
+    @test tb.vdate.data == [1, 0, 0]
 end
 
 @testset "writestat dta" begin

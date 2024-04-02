@@ -219,7 +219,7 @@ julia> push!(x, 3 => "c")
  2 => b
  3 => c
 
-julia> deleteat!(x, 4)
+julia> deleteat!(x, 4:5)
 3-element LabeledVector{Int64, Vector{Int64}, Int64}:
  0 => 0
  1 => a

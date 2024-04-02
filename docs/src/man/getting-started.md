@@ -159,6 +159,35 @@ out.vbyte
 out.vint
 ```
 
+It is possible to specify the format of certain variables.
+This is can be important, for example, for variables representing date/time.
+In the above example, a default format has been selected:
+
+```@repl getting-started
+out.vdate
+colmetadata(out, :vdate, "format")
+```
+
+To specify a different format, a convenient approach is to specify
+the `varformat` keyword argument:
+
+```@repl getting-started
+out2 = writestat("data/write_alltypes.dta", df, varformat=Dict(:vdate=>"%tm"));
+out2.vdate
+colmetadata(out2, :vdate, "format")
+```
+
+Notice that since the format `"%tm"` is for months,
+the day within the month has been ignored and becomes 1.
+
+!!! warning
+
+    When specifying Stata formats such as `"%tw"`, `"%tm"`, `"%tq"`,
+    it is best to first convert the `Date` values to the first date
+    of the corresponding period.
+    Otherwise, wrong values may be generated due to the rounding issues
+    involving dates.
+
 !!! warning
 
     The write support is experimental and not fully developed.
