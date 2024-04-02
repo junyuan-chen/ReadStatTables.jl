@@ -180,13 +180,12 @@ colmetadata(out2, :vdate, "format")
 Notice that since the format `"%tm"` is for months,
 the day within the month has been ignored and becomes 1.
 
-!!! warning
+!!! info
 
-    When specifying Stata formats such as `"%tw"`, `"%tm"`, `"%tq"`,
-    it is best to first convert the `Date` values to the first date
-    of the corresponding period.
-    Otherwise, wrong values may be generated due to the rounding issues
-    involving dates.
+    When a variable has a Stata format `"%tw"`, `"%tm"`, `"%tq"` or `"%th"`,
+    a displayed `Date` is always the first day within the corresponding Stata period.
+    In particular, Stata counts week numbers starting from the first day of each year
+    and hence a displayed `Date` may not correspond to the first day of a calendar week.
 
 !!! warning
 

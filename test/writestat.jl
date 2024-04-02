@@ -43,20 +43,35 @@
     @test_throws ErrorException ReadStatTable(df, ".dta", refpoolaslabel=false)
 end
 
-@testset "writestat format" begin
-    alltypes = "$(@__DIR__)/../data/alltypes.dta"
-    df = DataFrame(readstat(alltypes))
-    emptycolmetadata!(df)
-    df.vdate[2] = Date(1959, 12, 1)
-    df.vdate[3] = Date(1960, 1, 1)
-    tb = ReadStatTable(df, ".dta", varformat=Dict(:vdate=>"%tm"))
-    @test colmetadata(tb, :vdate, "format") == "%tm"
-    @test tb.vdate.data == [0, -1, 0]
-    df.vdate[1] = Date(1960, 2, 1)
-    df.vdate[2] = Date(1959, 12, 2)
-    df.vdate[3] = Date(1960, 1, 31)
-    tb = ReadStatTable(df, ".dta", varformat=Dict(:vdate=>"%tm"))
-    @test tb.vdate.data == [1, 0, 0]
+@testset "writestat date format" begin
+    outfile = "$(@__DIR__)/../data/test_date.dta"
+    df = DataFrame((date = [missing, Date(1960, 1, 1), Date(1960, 1, 31), Date(1960, 2, 1),
+        Date(1960, 3, 31), Date(1960, 4, 1), Date(1960, 6, 30), Date(1960, 7, 1),
+        Date(1960, 12, 31), Date(1961, 1, 1), Date(1961, 3, 31),
+        Date(1959, 12, 31), Date(1959, 12, 1), Date(1959, 7, 1), Date(1959, 6, 30)]))
+    tb = ReadStatTable(df, ".dta", varformat=Dict(:date=>"%td"))
+    @test isequal(tb.date, df.date)
+    tb = writestat(outfile, df, varformat=Dict(:date=>"%tw"))
+    @test eltype(tb.date) == Union{Date, Missing}
+    # Compare results from Stata
+    # In Mata mode, use "wofd(mdy(6, 30, 1959))" to generate value
+    @test isequal(tb.date.data,
+        [missing, 0, 4, 4, 12, 13, 25, 26, 51, 52, 64, -1, -5, -27, -27])
+    # Compare dates with weeks displayed in Stata
+    w = [1, 5, 5, 13, 14, 26, 27, 52, 1, 13, 52, 48, 26, 26]
+    @test isequal(tb.date,
+        [missing, (Date.(year.(df.date[2:end]), 1, 1) .+ Day.(7 .* (w .- 1)))...])
+    tb = writestat(outfile, df, varformat=Dict(:date=>"%tm"))
+    @test eltype(tb.date) == Union{Date, Missing}
+    @test isequal(tb.date.data, [missing, 0, 0, 1, 2, 3, 5, 6, 11, 12, 14, -1, -1, -6, -7])
+    @test isequal(tb.date, [missing,
+        (Date.(year.(df.date[2:end]), 1, 1) .+ Month.(month.(df.date[2:end]).-1))...])
+    tb = writestat(outfile, df, varformat=Dict(:date=>"%tq"))
+    @test isequal(tb.date.data, [missing, 0, 0, 0, 0, 1, 1, 2, 3, 4, 4, -1, -1, -2, -3])
+    @test isequal(tb.date, [missing, (Date.(year.(df.date[2:end]), 1, 1) .+
+        Month.(3 .* (quarterofyear.(df.date[2:end]).-1)))...])
+    tb = writestat(outfile, df, varformat=Dict(:date=>"%th"))
+    @test isequal(tb.date.data, [missing, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, -1, -1, -1, -2])
 end
 
 @testset "writestat dta" begin
@@ -155,4 +170,14 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
     # check that data round-tripped correctly
     df_read_back = DataFrame(rs_table_read_back)
     @test isequal(df_read_back, df_full) # isequal returns true for missings and NaNs
+
+    # Verify that date/time is processed as expected
+    # .por file gives error of illegal character if variable name is not capitalized
+    datetime = DataFrame((DATE = Date(1960,1,1).+Day.(rand(-10000:10000, 20)),
+        TIME = DateTime(1960,1,1,1,1,1,120) .+ Millisecond.(rand(Int(-1e12):Int(1e12), 20))))
+    datetimefile = "$(@__DIR__)/../data/test_write_datetime.$ext"
+    tb = writestat(datetimefile, datetime)
+    r = readstat(datetimefile)
+    @test r.DATE == datetime.DATE
+    @test r.TIME == datetime.TIME
 end

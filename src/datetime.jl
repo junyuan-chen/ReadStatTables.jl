@@ -5,14 +5,15 @@ const sas_epoch_date = Date(1960, 1, 1)
 const spss_epoch_time = DateTime(1582, 10, 14)
 
 # Reference: Stata documentation
+# No need to handle %ty because values are already calendar years
 const stata_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
     "%tc" => (stata_epoch_time, Millisecond(1)),
     "%td" => (stata_epoch_date, Day(1)),
+    # %tw will be handled differently
     "%tw" => (stata_epoch_date, Week(1)),
     "%tm" => (stata_epoch_date, Month(1)),
     "%tq" => (stata_epoch_date, Month(3)),
-    "%th" => (stata_epoch_date, Month(6)),
-    "%ty" => (Date(0), Year(1))
+    "%th" => (stata_epoch_date, Month(6))
 )
 
 # Reference: https://github.com/Roche/pyreadstat/blob/master/pyreadstat/_readstat_parser.pyx
@@ -117,28 +118,57 @@ struct Num2DateTime{DT<:Union{DateTime, Date}, P<:Period}
     delta::P
 end
 
-(NDT::Num2DateTime{DT, P})(num) where {DT, P} =
+# Raise InexactError if num cannot be converted to integer
+(NDT::Num2DateTime{DT, <:Union{Day, Month}})(num) where DT =
     ismissing(num) ? num : NDT.epoch + num * NDT.delta
+
+# For second/millisecond, round to the closest millisecond to avoid InexactError
+(NDT::Num2DateTime{DT, <:Union{Millisecond, Second}})(num) where DT =
+    ismissing(num) ? num :
+        NDT.epoch + round(Int, num * (NDT.delta / Millisecond(1))) * Millisecond(1)
+
+# Stata always counts week number from Jan 1 of each year
+# Each year always has 52 weeks and any extra day is in Week 52
+function (NDT::Num2DateTime{DT, Week})(num) where DT
+    if ismissing(num)
+        return num
+    else
+        y = floor(Int, num/52)
+        return (Date(year(NDT.epoch)+y, 1, 1) + Day(7*(num - 52*y)))
+    end
+end
 
 struct DateTime2Num{NDT<:Num2DateTime}
     ndt::NDT
 end
 
 # Take divisions when delta is a Millisecond or Second
-(DTN::DateTime2Num{<:Num2DateTime{<:Any, <:Union{Millisecond, Second}}})(dt) =
+(DTN::DateTime2Num{<:Num2DateTime{DT, <:Union{Millisecond, Second}}})(dt) where DT =
     ismissing(dt) ? dt : (dt - DTN.ndt.epoch) / DTN.ndt.delta
 
-# Use integers for all other types of delta
-# Division can result in type promotion error for some types
-function (DTN::DateTime2Num{Num2DateTime{DT, P}})(dt) where {DT, P}
+# Intend to be used when delta is Day(1)
+(DTN::DateTime2Num{Num2DateTime{Date, Day}})(dt) =
+    ismissing(dt) ? dt : round(Int32, (dt - DTN.ndt.epoch) / DTN.ndt.delta)
+
+# This method is just for Stata %tw
+function (DTN::DateTime2Num{Num2DateTime{Date, Week}})(dt)
     if ismissing(dt)
         return dt
-    elseif dt > DTN.ndt.epoch
-        return max(length(DTN.ndt.epoch:DTN.ndt.delta:dt) - 1, 0)
-    elseif dt < DTN.ndt.epoch
-        return - max(length(dt:DTN.ndt.delta:DTN.ndt.epoch) - 1, 0)
     else
-        return 0
+        y = year(dt) - year(DTN.ndt.epoch)
+        dofy = dayofyear(dt) - 1
+        # The extra days after Week 52 are counted as Week 52
+        return Int32(52 * y) + min(floor(Int32, dofy / 7), Int32(51))
+    end
+end
+
+function (DTN::DateTime2Num{Num2DateTime{Date, Month}})(dt)
+    if ismissing(dt)
+        return dt
+    else
+        y = year(dt) - year(DTN.ndt.epoch)
+        step = 12 / DTN.ndt.delta.value
+        return Int32(step * y) + floor(Int32, (month(dt)-1) / DTN.ndt.delta.value)
     end
 end
 
