@@ -160,7 +160,7 @@ out.vint
 ```
 
 It is possible to specify the format of certain variables.
-This is can be important, for example, for variables representing date/time.
+This can be important, for example, for variables representing date/time.
 In the above example, a default format has been selected:
 
 ```@repl getting-started
@@ -178,7 +178,8 @@ colmetadata(out2, :vdate, "format")
 ```
 
 Notice that since the format `"%tm"` is for months,
-the day within the month has been ignored and becomes 1.
+the day within a month has been ignored and becomes 1
+for the printed value of `Date` in the above example.
 
 !!! info
 
@@ -189,7 +190,7 @@ the day within the month has been ignored and becomes 1.
 
 !!! warning
 
-    The write support is experimental and not fully developed.
+    The write support is experimental and requires further testing.
     Caution should be taken when writing the data files.
 
 ## More Options

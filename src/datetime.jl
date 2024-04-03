@@ -134,7 +134,7 @@ function (NDT::Num2DateTime{DT, Week})(num) where DT
         return num
     else
         y = floor(Int, num/52)
-        return (Date(year(NDT.epoch)+y, 1, 1) + Day(7*(num - 52*y)))
+        return Date(year(NDT.epoch)+y, 1, 1) + Day(7*(num - 52*y))
     end
 end
 
@@ -167,7 +167,7 @@ function (DTN::DateTime2Num{Num2DateTime{Date, Month}})(dt)
         return dt
     else
         y = year(dt) - year(DTN.ndt.epoch)
-        step = 12 / DTN.ndt.delta.value
+        step = 12 ÷ DTN.ndt.delta.value
         return Int32(step * y) + floor(Int32, (month(dt)-1) / DTN.ndt.delta.value)
     end
 end

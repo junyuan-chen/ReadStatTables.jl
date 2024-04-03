@@ -21,7 +21,7 @@ is sufficient for uncovering the represented date/time values for a given format
     Each year always consists of 52 weeks.
     Any remaining day at the end of a year is counted as the 52th week within that year.
     Conversion for a variable with format `"%tw"` is therefore handled differently.
-    For `"%ty"`, the recorded numerical values are simply the year numbers
+    For `"%ty"`, the recorded numerical values are simply the calendar years
     without any transformation.
     A variable with format `"%ty"` is not converted to Julia `Date` or `DateTime`.
 

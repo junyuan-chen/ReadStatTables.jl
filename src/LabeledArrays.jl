@@ -89,6 +89,7 @@ Base.isless(x::LabeledValue, y::Missing) = isless(x.value, y)
 Base.isless(x::Missing, y::LabeledValue) = isless(x, y.value)
 Base.isapprox(x::LabeledValue, y; kwargs...) = isapprox(x.value, y; kwargs...)
 Base.isapprox(x, y::LabeledValue; kwargs...) = isapprox(x, y.value; kwargs...)
+Base.ismissing(x::LabeledValue) = ismissing(x.value)
 
 Base.iszero(x::LabeledValue) = iszero(x.value)
 Base.isnan(x::LabeledValue) = isnan(x.value)
