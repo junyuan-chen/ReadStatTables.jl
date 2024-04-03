@@ -14,6 +14,17 @@ since a reference date or time point (epoch) chosen by the software.
 Therefore, knowing the reference data/time and the length of a single period
 is sufficient for uncovering the represented date/time values for a given format.
 
+!!! info
+
+    Two exceptions are Stata format `"%tw"` for weeks and `"%ty"` for years.
+    Stata always counts the week numbers starting from the first day of a year.
+    Each year always consists of 52 weeks.
+    Any remaining day at the end of a year is counted as the 52th week within that year.
+    Conversion for a variable with format `"%tw"` is therefore handled differently.
+    For `"%ty"`, the recorded numerical values are simply the calendar years
+    without any transformation.
+    A variable with format `"%ty"` is not converted to Julia `Date` or `DateTime`.
+
 If a variable is in a date/time format that can be recognized,
 the values will be displayed as Julia `Date` or `DateTime`
 when printing a `ReadStatTable`.
@@ -75,14 +86,14 @@ ReadStatTables.spss_dt_formats["TIME"]
 
 [^1]:
 
-    For Stata, all date/time formats except `%tC` and `%d` are supported.
-    The only difference between the `%tC` format and the `%tc` format
-    is that `%tC` takes into account leap seconds while `%tc` does not.
+    For Stata, all date/time formats except `"%tC"` and `"%d"` are supported.
+    The only difference between the `"%tC"` format and the `"%tc"` format
+    is that `"%tC"` takes into account leap seconds while `"%tc"` does not.
     Since the `DateTime` type in the
     [Dates](https://docs.julialang.org/en/v1/stdlib/Dates/) module
     does not allow leap seconds,
-    only the `%tc` format is supported.
-    The `%d` format that appears in earlier versions of Stata
+    only the `"%tc"` format is supported.
+    The `"%d"` format that appears in earlier versions of Stata
     is no longer documented in recent versions.
     For SAS and SPSS, the coverage of date/time formats might be less comprehensive.
 

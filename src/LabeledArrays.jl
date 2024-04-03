@@ -89,6 +89,7 @@ Base.isless(x::LabeledValue, y::Missing) = isless(x.value, y)
 Base.isless(x::Missing, y::LabeledValue) = isless(x, y.value)
 Base.isapprox(x::LabeledValue, y; kwargs...) = isapprox(x.value, y; kwargs...)
 Base.isapprox(x, y::LabeledValue; kwargs...) = isapprox(x, y.value; kwargs...)
+Base.ismissing(x::LabeledValue) = ismissing(x.value)
 
 Base.iszero(x::LabeledValue) = iszero(x.value)
 Base.isnan(x::LabeledValue) = isnan(x.value)
@@ -219,7 +220,7 @@ julia> push!(x, 3 => "c")
  2 => b
  3 => c
 
-julia> deleteat!(x, 4)
+julia> deleteat!(x, 4:5)
 3-element LabeledVector{Int64, Vector{Int64}, Int64}:
  0 => 0
  1 => a

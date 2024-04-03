@@ -13,6 +13,7 @@
     @test v1 < v2
     @test isless(v1, v2)
     @test isapprox(v1, v3)
+    @test ismissing(v4)
 
     @test !iszero(v1)
     @test iszero(LabeledValue(0, lbls1))
