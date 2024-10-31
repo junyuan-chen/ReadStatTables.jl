@@ -28,7 +28,7 @@ const sas_date_formats = [
     "E8601DA", "E8601DN"
 ]
 const sas_datetime_formats = [
-    "DATETIME", "DATETIME18", "DATETIME19",  "DATETIME20", "DATETIME21",
+    "DATETIME", "DATETIME13", "DATETIME18", "DATETIME19",  "DATETIME20", "DATETIME21",
     "DATETIME22", "TOD", "E8601DT", "E8601DX", "E8601DZ", "E8601LX",
 ]
 const sas_time_formats = [
