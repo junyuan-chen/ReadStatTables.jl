@@ -428,4 +428,8 @@ end
     @test m.file_format_version == 5
     @test m.table_name == "SAMPLE"
     @test m.file_ext == ".xpt"
+
+    xpt = "$(@__DIR__)/../data/datetime13.xpt"
+    d = readstat(xpt)
+    @test isa(only(d.DTTEST), DateTime)
 end
