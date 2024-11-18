@@ -27,7 +27,8 @@ makedocs(
             "License" => "license.md"
         ]
     ],
-    workdir = joinpath(@__DIR__, "..")
+    workdir = joinpath(@__DIR__, ".."),
+    checkdocs = :export
 )
 
 deploydocs(

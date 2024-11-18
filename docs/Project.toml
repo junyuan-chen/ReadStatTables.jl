@@ -7,4 +7,4 @@ ReadStatTables = "52522f7a-9570-4e34-8ac6-c005c74d4b84"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [compat]
-Documenter = "0.27"
+Documenter = "1"

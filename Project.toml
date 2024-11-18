@@ -31,7 +31,7 @@ PrecompileTools = "1"
 PrettyTables = "1, 2"
 ReadStat_jll = "1.1.9"
 SentinelArrays = "1.2"
-StructArrays = "0.6"
+StructArrays = "0.6, 0.7"
 Tables = "1.2"
 julia = "1.7"
 

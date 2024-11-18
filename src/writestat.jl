@@ -246,8 +246,6 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         # ! Assume no need to re-encode columns with date/time values
         col = Tables.getcolumn(table, i)
         lblname = colmeta.vallabel[i]
-        # PooledArray is not treated as LabeledArray here due to conflict with getindex
-        # Will be fixed after ReadStatColumns is improved for v0.3
         _set_vallabels!(colmeta, vallabels, lblname, false, names, col, i)
         if update_width
             type = colmeta.type[i]
