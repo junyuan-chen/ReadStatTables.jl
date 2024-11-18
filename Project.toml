@@ -1,7 +1,7 @@
 name = "ReadStatTables"
 uuid = "52522f7a-9570-4e34-8ac6-c005c74d4b84"
 authors = ["Junyuan Chen <norman.chen.git@gmail.com>"]
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
