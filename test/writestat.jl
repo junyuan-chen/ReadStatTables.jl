@@ -74,6 +74,43 @@ end
     @test isequal(tb.date.data, [missing, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, -1, -1, -1, -2])
 end
 
+@testset "writestat string" begin
+    outfile = "$(@__DIR__)/../data/test_string.dta"
+    types = [String, String3, String7, String15, String31,
+        String63, String127, String255]
+    cols = [Symbol(:col, i) => T[T("a")] for (i, T) in enumerate(types)]
+    df = DataFrame((; cols...))
+    df[!,:col0] .= 'a'
+    tb = writestat(outfile, df)
+    push!(types, String)
+    for (i, col) in enumerate(tb)
+        @test eltype(col) == types[i]
+        @test col[1] == "a"
+    end
+    ws = Int.(colmetavalues(tb, :storage_width))
+    @test ws == [1, 3, 7, 15, 31, 63, 127, 255, 1]
+    readstat(outfile)
+    allowmissing!(df)
+    df[!,:colm] .= missing
+    for col in eachcol(df)
+        push!(col, missing)
+    end
+    tb = writestat(outfile, df)
+    push!(types, String)
+    for (i, col) in enumerate(tb)
+        @test eltype(col) == types[i]
+        if i < length(tb)
+            @test col[1] == "a"
+            @test col[2] == ""
+        else
+            @test col[1] == ""
+        end
+    end
+    ws = Int.(colmetavalues(tb, :storage_width))
+    @test ws == [1, 3, 7, 15, 31, 63, 127, 255, 1, 1]
+    readstat(outfile)
+end
+
 @testset "writestat dta" begin
     alltypes = "$(@__DIR__)/../data/alltypes.dta"
     dtype = readstat(alltypes)
