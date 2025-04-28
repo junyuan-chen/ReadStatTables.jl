@@ -35,8 +35,7 @@ function _readstat_string_width(col)
         maxlen = maximum(col) do str
             ismissing(str) ? 0 : ncodeunits(str)
         end
-        # In case col only contains Missing
-        return Csize_t(maxlen) # max(maxlen, 1)
+        return Csize_t(maxlen)
     end
 end
 
@@ -80,7 +79,7 @@ is not already a `ReadStatTable`.
 Hence, it is useful for gaining fine-grained control over the content to be written.
 Metadata may be manually specified with keyword arguments.
 
-Any `Missing` existing in string columns will be replaced by an empty string `""`.
+Any `missing` existing in string columns will be replaced by an empty string `""`.
 A column with element type `Missing` is treated as a column with empty strings.
 
 # Keywords
@@ -230,7 +229,7 @@ function ReadStatTable(table, ext::AbstractString;
             elseif eltype(col) != Missing
                 T = nonmissingtype(eltype(col))
                 if T <: AbstractString
-                    # Missing is represented by "" for string columns
+                    # missing is replaced by "" for string columns
                     tarcol .= T.(coalesce.(col, ""))
                 elseif Char <: T
                     tarcol .= string.(coalesce.(col, ""))
