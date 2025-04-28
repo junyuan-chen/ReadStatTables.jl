@@ -87,6 +87,9 @@ end
         @test eltype(col) == types[i]
         @test col[1] == "a"
     end
+    ws = Int.(colmetavalues(tb, :storage_width))
+    @test ws == [1, 3, 7, 15, 31, 63, 127, 255, 1]
+    readstat(outfile)
     allowmissing!(df)
     df[!,:colm] .= missing
     for col in eachcol(df)
@@ -103,6 +106,9 @@ end
             @test col[1] == ""
         end
     end
+    ws = Int.(colmetavalues(tb, :storage_width))
+    @test ws == [1, 3, 7, 15, 31, 63, 127, 255, 1, 1]
+    readstat(outfile)
 end
 
 @testset "writestat dta" begin
