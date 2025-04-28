@@ -13,6 +13,7 @@ rstype(::Type{<:Integer}) = READSTAT_TYPE_INT32
 rstype(::Type{Float32}) = READSTAT_TYPE_FLOAT
 rstype(::Type{<:Real}) = READSTAT_TYPE_DOUBLE
 rstype(::Type{<:AbstractString}) = READSTAT_TYPE_STRING
+rstype(::Type{Char}) = READSTAT_TYPE_STRING
 rstype(type) = error("element type $type is not supported")
 
 # Stata .dta format before version 118 does not support Unicode for string variables
@@ -24,13 +25,18 @@ const default_file_format_version = Dict{String, Int}(
 
 # Accepted maximum length for strings varies by the file format and version
 function _readstat_string_width(col)
-    if eltype(col) <: Union{InlineString, Missing}
+    if eltype(col) == Missing
+        return Csize_t(1)
+    elseif nonmissingtype(eltype(col)) <: InlineString
         return Csize_t(sizeof(eltype(col))-1)
+    elseif nonmissingtype(eltype(col)) == Char
+        return Csize_t(1)
     else
         maxlen = maximum(col) do str
             ismissing(str) ? 0 : ncodeunits(str)
         end
-        return Csize_t(maxlen)
+        # In case col only contains Missing
+        return Csize_t(maxlen) # max(maxlen, 1)
     end
 end
 
@@ -73,6 +79,9 @@ This method is used by [`writestat`](@ref) when the provided `table`
 is not already a `ReadStatTable`.
 Hence, it is useful for gaining fine-grained control over the content to be written.
 Metadata may be manually specified with keyword arguments.
+
+Any `Missing` existing in string columns will be replaced by an empty string `""`.
+A column with element type `Missing` is treated as a column with empty strings.
 
 # Keywords
 - `copycols::Bool = true`: copy data columns to `ReadStatColumns`; this is required for writing columns of date/time values (that are not already represented by numeric values).
@@ -139,7 +148,7 @@ function ReadStatTable(table, ext::AbstractString;
             end
         end
         # Lazily convert any Date/DateTime column
-        if eltype(col) <: Union{Date, DateTime, Missing}
+        if nonmissingtype(eltype(col)) ∈ (Date, DateTime) # Avoid Missing column
             copycols || error("to write tables with date/time columns, copycols must be true")
             ext == ".dta" && (format = first(format, 3))
             dtpara = get(dt_formats[ext], format, nothing)
@@ -162,6 +171,8 @@ function ReadStatTable(table, ext::AbstractString;
         end
         if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
             type = rstype(nonmissingtype(eltype(refarray(col))))
+        elseif eltype(col) == Missing # Will write empty strings
+            type = READSTAT_TYPE_STRING
         else
             type = rstype(nonmissingtype(eltype(col)))
         end
@@ -201,18 +212,31 @@ function ReadStatTable(table, ext::AbstractString;
             elseif type == READSTAT_TYPE_DOUBLE
                 tarcol = SentinelVector{Float64}(undef, M)
             else # READSTAT_TYPE_STRING
-                T = eltype(col)
-                if T in (String3, String7, String15, String31,
-                        String63, String127, String255)
-                    tarcol = Vector{T}(undef, M)
+                if eltype(col) == Missing
+                    # Cannot turn "" into String1
+                    tarcol = fill("", M)
                 else
-                    tarcol = Vector{String}(undef, M)
+                    T = nonmissingtype(eltype(col))
+                    if T in (String3, String7, String15, String31,
+                            String63, String127, String255)
+                        tarcol = Vector{T}(undef, M)
+                    else # Char is not accepted by writer
+                        tarcol = Vector{String}(undef, M)
+                    end
                 end
             end
             if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
                 copyto!(tarcol, refarray(col))
-            else
-                copyto!(tarcol, col)
+            elseif eltype(col) != Missing
+                T = nonmissingtype(eltype(col))
+                if T <: AbstractString
+                    # Missing is represented by "" for string columns
+                    tarcol .= T.(coalesce.(col, ""))
+                elseif Char <: T
+                    tarcol .= string.(coalesce.(col, ""))
+                else
+                    copyto!(tarcol, col)
+                end
             end
             push!(cols, tarcol)
         end
