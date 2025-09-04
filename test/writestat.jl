@@ -109,6 +109,12 @@ end
     ws = Int.(colmetavalues(tb, :storage_width))
     @test ws == [1, 3, 7, 15, 31, 63, 127, 255, 1, 1]
     readstat(outfile)
+
+    # Verify SubString works
+    str = view("abcd", 1:2)
+    df[!,:substr] .= str
+    tb = writestat(outfile, df)
+    @test all(tb.substr .== str)
 end
 
 @testset "writestat dta" begin
