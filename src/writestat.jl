@@ -228,10 +228,10 @@ function ReadStatTable(table, ext::AbstractString;
                 copyto!(tarcol, refarray(col))
             elseif eltype(col) != Missing
                 T = nonmissingtype(eltype(col))
-                if T <: AbstractString
+                if T <: InlineString || T == String
                     # missing is replaced by "" for string columns
                     tarcol .= T.(coalesce.(col, ""))
-                elseif Char <: T
+                elseif T <: SubString || T == Char
                     tarcol .= string.(coalesce.(col, ""))
                 else
                     copyto!(tarcol, col)

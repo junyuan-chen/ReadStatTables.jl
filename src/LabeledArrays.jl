@@ -96,7 +96,7 @@ Base.isnan(x::LabeledValue) = isnan(x.value)
 Base.isinf(x::LabeledValue) = isinf(x.value)
 Base.isfinite(x::LabeledValue) = isfinite(x.value)
 
-Base.hash(x::LabeledValue, h::UInt=zero(UInt)) = hash(x.value, h)
+Base.hash(x::LabeledValue, h::UInt) = hash(x.value, h)
 
 Base.length(x::LabeledValue) = length(x.value)
 

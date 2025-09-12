@@ -87,7 +87,9 @@ function _write_value(io::IOStream, write_ext, writer, tb::ReadStatTable)
             elseif type === READSTAT_TYPE_DOUBLE
                 _error(insert_double_value(writer, var, Float64(unwrap(val))))
             elseif type === READSTAT_TYPE_STRING
-                str = Base.unsafe_convert(Cstring, Base.cconvert(Cstring, unwrap(val)))
+                # str = Base.unsafe_convert(Cstring, Base.cconvert(Cstring, unwrap(val)))
+                # A tentative fix for Julia v1.13
+                str = Base.unsafe_convert(Cstring, String(unwrap(val)))
                 _error(insert_string_value(writer, var, str))
             #! To do: handle string_ref and date/time
             end
