@@ -33,7 +33,8 @@ function _readstat_string_width(col)
     elseif nonmissingtype(eltype(col)) == Char
         return Csize_t(1)
     else
-        maxlen = maximum(col) do str
+        string_col = eltype(col) <: LabeledValue ? refarray(col) : col
+        maxlen = maximum(string_col) do str
             ismissing(str) ? 0 : ncodeunits(str)
         end
         return Csize_t(maxlen)
