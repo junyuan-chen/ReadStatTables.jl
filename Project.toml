@@ -1,7 +1,7 @@
 name = "ReadStatTables"
 uuid = "52522f7a-9570-4e34-8ac6-c005c74d4b84"
 authors = ["Junyuan Chen <norman.chen.git@gmail.com>"]
-version = "0.3.4"
+version = "0.3.5"
 
 [deps]
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
@@ -28,7 +28,7 @@ MappedArrays = "0.4"
 Missings = "1"
 PooledArrays = "1"
 PrecompileTools = "1"
-PrettyTables = "1, 2"
+PrettyTables = "1, 2, 3"
 ReadStat_jll = "1.1.9"
 SentinelArrays = "1.2"
 StructArrays = "0.6, 0.7"

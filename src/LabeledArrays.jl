@@ -474,11 +474,20 @@ Base.collect(::Type{<:LabeledValue{T}}, x::LabeledArrOrSubOrReshape) where T =
 disallowmissing(x::LabeledArrOrSubOrReshape) =
     LabeledArray(disallowmissing(refarray(x)), getvaluelabels(x))
 
-# Assume VERSION >= v"1.3.0"
 # Define abbreviated element type name for printing with PrettyTables.jl
-function compact_type_str(::Type{<:LabeledValue{V}}) where V
-    str = V >: Missing ? string(nonmissingtype(V)) * "?" : string(V)
-    return replace("Labeled{" * str * "}", "Union" => "U")
+const _compact_type_str = @static if isdefined(PrettyTables, :compact_type_str)
+    # PrettyTables < 3
+    PrettyTables.compact_type_str
+elseif isdefined(PrettyTables, :_compact_type_str)
+    # PrettyTables 3
+    PrettyTables._compact_type_str
+else
+    nothing
+end
+if _compact_type_str !== nothing
+    function _compact_type_str(::Type{<:LabeledValue{V}}) where V
+        return string("Labeled{", _compact_type_str(V), "}")
+    end
 end
 
 struct LabelIterator{A, N} <: AbstractArray{String, N}
