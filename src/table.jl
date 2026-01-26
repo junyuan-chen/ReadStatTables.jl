@@ -371,9 +371,23 @@ function Base.show(io::IO, ::MIME"text/plain", tb::ReadStatTable)
     if ncol(tb) > 0 && nrow(tb) > 0
         println(io, ':')
         nr, nc = displaysize(io)
-        pretty_table(IOContext(io, :limit=>true, :displaysize=>(nr-3, nc)),
-            tb, vlines=1:1, hlines=1:1, show_row_number=true,
-            newline_at_end=false, vcrop_mode=:middle)
+        @static if isdefined(PrettyTables, :TextTableFormat)
+            # PrettyTables v3
+            pretty_table(io, tb;
+                limit_printing=true, display_size=(nr-3, nc),
+                show_row_number_column=true,
+                new_line_at_end=false, vertical_crop_mode=:middle, continuation_row_alignment=:c,
+                table_format = PrettyTables.TextTableFormat(;
+                    PrettyTables.@text__no_horizontal_lines,
+                    PrettyTables.@text__no_vertical_lines,
+                    vertical_line_after_row_number_column=true,
+                    horizontal_line_after_column_labels=true))
+        else
+            # PrettyTables < v3        
+            pretty_table(IOContext(io, :limit=>true, :displaysize=>(nr-3, nc)),
+                tb, vlines=1:1, hlines=1:1, show_row_number=true,
+                newline_at_end=false, vcrop_mode=:middle)
+        end
     end
 end
 

@@ -7,7 +7,7 @@ using Dates: unix2datetime
 using InlineStrings
 using MappedArrays: MappedArray, mappedarray
 using PooledArrays: PooledArray, PooledVector, RefArray, _label
-using PrettyTables: pretty_table
+using PrettyTables: PrettyTables, pretty_table
 using ReadStat_jll
 using SentinelArrays: SentinelVector, ChainedVector
 using StructArrays: StructVector
@@ -17,7 +17,6 @@ import DataAPI: defaultarray, refarray, unwrap, nrow, ncol,
     metadatasupport, colmetadatasupport,
     metadata, metadatakeys, metadata!, colmetadata, colmetadatakeys, colmetadata!
 import Missings: disallowmissing
-import PrettyTables: compact_type_str
 import Tables: columnnames
 
 export refarray, unwrap, nrow, ncol, metadata, metadatakeys, metadata!,
