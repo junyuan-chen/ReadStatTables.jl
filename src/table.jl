@@ -372,7 +372,7 @@ function Base.show(io::IO, ::MIME"text/plain", tb::ReadStatTable)
         println(io, ':')
         nr, nc = displaysize(io)
         @static if isdefined(PrettyTables, :TextTableFormat)
-            # PrettyTables 3
+            # PrettyTables v3
             pretty_table(io, tb;
                 limit_printing=true, display_size=(nr-3, nc),
                 show_row_number_column=true,
@@ -383,7 +383,7 @@ function Base.show(io::IO, ::MIME"text/plain", tb::ReadStatTable)
                     vertical_line_after_row_number_column=true,
                     horizontal_line_after_column_labels=true))
         else
-            # PrettyTables < 3        
+            # PrettyTables < v3        
             pretty_table(IOContext(io, :limit=>true, :displaysize=>(nr-3, nc)),
                 tb, vlines=1:1, hlines=1:1, show_row_number=true,
                 newline_at_end=false, vcrop_mode=:middle)

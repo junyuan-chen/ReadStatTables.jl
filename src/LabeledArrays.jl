@@ -475,19 +475,12 @@ disallowmissing(x::LabeledArrOrSubOrReshape) =
     LabeledArray(disallowmissing(refarray(x)), getvaluelabels(x))
 
 # Define abbreviated element type name for printing with PrettyTables.jl
-const _compact_type_str = @static if isdefined(PrettyTables, :compact_type_str)
-    # PrettyTables < 3
-    PrettyTables.compact_type_str
-elseif isdefined(PrettyTables, :_compact_type_str)
-    # PrettyTables 3
-    PrettyTables._compact_type_str
-else
-    nothing
-end
-if _compact_type_str !== nothing
-    function _compact_type_str(::Type{<:LabeledValue{V}}) where V
-        return string("Labeled{", _compact_type_str(V), "}")
-    end
+@static if isdefined(PrettyTables, :compact_type_str) # PrettyTables < v3
+    PrettyTables.compact_type_str(::Type{<:LabeledValue{V}}) where V =
+        string("Labeled{", PrettyTables.compact_type_str(V), "}")
+elseif isdefined(PrettyTables, :_compact_type_str) # PrettyTables v3
+    PrettyTables._compact_type_str(::Type{<:LabeledValue{V}}) where V =
+        string("Labeled{", PrettyTables._compact_type_str(V), "}")
 end
 
 struct LabelIterator{A, N} <: AbstractArray{String, N}
