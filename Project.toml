@@ -18,9 +18,15 @@ SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
+[weakdeps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+
+[extensions]
+ReadStatTablesDataFramesExt = "DataFrames"
+
 [compat]
 CEnum = "0.4, 0.5"
-CategoricalArrays = "0.10"
+CategoricalArrays = "0.10, 1"
 DataAPI = "1.13"
 DataFrames = "1"
 InlineStrings = "1.1"
@@ -33,7 +39,7 @@ ReadStat_jll = "1.1.9"
 SentinelArrays = "1.2"
 StructArrays = "0.6, 0.7"
 Tables = "1.2"
-julia = "1.7"
+julia = "1.10"
 
 [extras]
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"

@@ -54,6 +54,8 @@ end
     @test all(n->isequal(df[!, n], getproperty(d, n)), columnnames(d))
     df = DataFrame(d, copycols=false)
     @test all(n->df[!, n] === getproperty(d, n), columnnames(d))
+    # Verify compacttype from ReadStatTablesDataFramesExt is working
+    @test sprint(show, MIME("text/plain"), d)[166:178] == "Labeled{Int8}"
 
     # Metadata-related methods require DataFrames.jl v1.4 or above
     # which requires Julia v1.6 or above
