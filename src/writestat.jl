@@ -7,6 +7,7 @@ const ext2writer = Dict{String, Any}(
 )
 
 # Default mapping from julia types to ReadStat types
+rstype(::Type{Bool}) = READSTAT_TYPE_INT8
 rstype(::Type{Int8}) = READSTAT_TYPE_INT8
 rstype(::Type{Int16}) = READSTAT_TYPE_INT16
 rstype(::Type{<:Integer}) = READSTAT_TYPE_INT32
