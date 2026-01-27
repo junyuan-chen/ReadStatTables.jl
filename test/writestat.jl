@@ -149,6 +149,13 @@ end
     tb4 = writestat("$(@__DIR__)/../data/write_df_alltypes.xpt", dtype)
     tb5 = writestat("$(@__DIR__)/../data/write_df_alltypes.xpt", df)
 
+    df = DataFrame(dtype)
+    df[!,:vbool] = [true, false, missing]
+    tb6 = writestat("$(@__DIR__)/../data/write_df_alltypes.dta", df)
+    @test eltype(tb6.vbool) == Union{Int8,Missing}
+    tb = readstat("$(@__DIR__)/../data/write_df_alltypes.dta")
+    @test all(isequal.(tb.vbool, tb6.vbool))
+
     stringtypes = "$(@__DIR__)/../data/stringtypes.dta"
     strtype = readstat(stringtypes)
     tb = writestat("$(@__DIR__)/../data/write_stringtypes.dta", strtype)
