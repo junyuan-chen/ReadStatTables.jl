@@ -355,16 +355,21 @@ end
 @testset "readstat sas7bdat" begin
     sas7 = "$(@__DIR__)/../data/sample.sas7bdat"
     d = readstat(sas7)
+    @test eltype(d.mychar) == String
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
         5×7 ReadStatTable:
-         Row │  mychar    mynum      mydate                dtime   mylabl    myord               mytime
-             │ String3  Float64       Date?            DateTime?  Float64  Float64            DateTime?
-        ─────┼──────────────────────────────────────────────────────────────────────────────────────────
-           1 │       a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
-           2 │       b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
-           3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
-           4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
-           5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
+         Row │ mychar    mynum      mydate                dtime   mylabl    myord               mytime
+             │ String  Float64       Date?            DateTime?  Float64  Float64            DateTime?
+        ─────┼─────────────────────────────────────────────────────────────────────────────────────────
+           1 │      a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
+           2 │      b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
+           3 │      c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
+           4 │      d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
+           5 │      e   1000.3     missing              missing      1.0      1.0              missing"""
+
+    # Opt-in restores InlineString behavior for SAS files
+    d_inline = readstat(sas7, inlinestring_width=32)
+    @test eltype(d_inline.mychar) == String3
 
     d = readstat(sas7, ntasks=3)
     @test d isa ReadStatTable{ChainedReadStatColumns}
@@ -395,16 +400,21 @@ end
 @testset "readstat xpt" begin
     xpt = "$(@__DIR__)/../data/sample.xpt"
     d = readstat(xpt)
+    @test eltype(d.MYCHAR) == String
     @test sprint(show, MIME("text/plain"), d, context=:displaysize=>(15,150)) == """
         5×7 ReadStatTable:
-         Row │  MYCHAR    MYNUM      MYDATE                DTIME   MYLABL    MYORD               MYTIME
-             │ String3  Float64       Date?            DateTime?  Float64  Float64            DateTime?
-        ─────┼──────────────────────────────────────────────────────────────────────────────────────────
-           1 │       a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
-           2 │       b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
-           3 │       c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
-           4 │       d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
-           5 │       e   1000.3     missing              missing      1.0      1.0              missing"""
+         Row │ MYCHAR    MYNUM      MYDATE                DTIME   MYLABL    MYORD               MYTIME
+             │ String  Float64       Date?            DateTime?  Float64  Float64            DateTime?
+        ─────┼─────────────────────────────────────────────────────────────────────────────────────────
+           1 │      a      1.1  2018-05-06  2018-05-06T10:10:10      1.0      1.0  1960-01-01T10:10:10
+           2 │      b      1.2  1880-05-06  1880-05-06T10:10:10      2.0      2.0  1960-01-01T23:10:10
+           3 │      c  -1000.3  1960-01-01  1960-01-01T00:00:00      1.0      3.0  1960-01-01T00:00:00
+           4 │      d     -1.4  1583-01-01  1583-01-01T00:00:00      2.0      1.0  1960-01-01T16:10:10
+           5 │      e   1000.3     missing              missing      1.0      1.0              missing"""
+
+    # Opt-in restores InlineString behavior for XPT files
+    d_inline = readstat(xpt, inlinestring_width=32)
+    @test eltype(d_inline.MYCHAR) == String3
 
     d = readstat(xpt, ntasks=3)
     @test d isa ReadStatTable{ReadStatColumns}
