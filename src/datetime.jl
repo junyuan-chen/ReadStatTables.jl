@@ -4,6 +4,12 @@ const sas_epoch_time = DateTime(1960, 1, 1)
 const sas_epoch_date = Date(1960, 1, 1)
 const spss_epoch_time = DateTime(1582, 10, 14)
 
+# Time-of-day conventions follow pyreadstat:
+# https://github.com/Roche/pyreadstat/blob/e23b1d8e56b155586cc562827972b6f7e30aab00/pyreadstat/_readstat_writer.pyx#L144-L216
+const time_of_day_epoch = Time(0)
+const stata_time_of_day_delta = Millisecond(1)
+const sas_spss_time_of_day_delta = Second(1)
+
 # Reference: Stata documentation
 # No need to handle %ty because values are already calendar years
 const stata_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
@@ -50,7 +56,7 @@ const spss_date_formats = [
     "DATE", "DATE8", "DATE11", "DATE12", "ADATE", "ADATE8", "ADATE10",
     "EDATE", "EDATE8", "EDATE10", "JDATE", "JDATE5", "JDATE7", "SDATE", "SDATE8", "SDATE10"
 ]
-const spss_time_formats = ["TIME", "DTIME", "TIME8", "TIME5", "TIME11.2"]
+const spss_time_formats = ["TIME", "DTIME", "TIME8", "TIME5", "TIME9", "TIME11.2"]
 
 const spss_dt_formats = Dict{String, Tuple{Union{DateTime,Date}, Period}}(
     vcat(spss_datetime_formats, spss_date_formats, spss_time_formats) .=>
@@ -113,7 +119,56 @@ const ext_default_time_format = Dict{String, String}(
     ".xpt" => "DATETIME"
 )
 
-struct Num2DateTime{DT<:Union{DateTime, Date}, P<:Period}
+const ext_time_of_day_epoch = Dict{String, Time}(
+    ".dta" => time_of_day_epoch,
+    ".sav" => time_of_day_epoch,
+    ".por" => time_of_day_epoch,
+    ".sas7bdat" => time_of_day_epoch,
+    ".xpt" => time_of_day_epoch
+)
+
+const ext_default_time_of_day_delta = Dict{String, Period}(
+    ".dta" => stata_time_of_day_delta,
+    ".sav" => sas_spss_time_of_day_delta,
+    ".por" => sas_spss_time_of_day_delta,
+    ".sas7bdat" => sas_spss_time_of_day_delta,
+    ".xpt" => sas_spss_time_of_day_delta
+)
+
+const ext_default_time_of_day_format = Dict{String, String}(
+    ".dta" => "%tcHH:MM:SS",
+    ".sav" => "TIME",
+    ".por" => "TIME",
+    ".sas7bdat" => "TIME",
+    ".xpt" => "TIME"
+)
+
+# Stata time-of-day formats per pyreadstat
+const stata_time_of_day_formats = ["%tcHH:MM:SS", "%tcHH:MM"]
+
+# Read-side lookup: format -> (Time(0), delta). Checked before dt_formats so
+# time-only columns deserialize to Dates.Time rather than DateTime.
+const stata_tod_dt_formats = Dict{String, Tuple{Time, Period}}(
+    f => (time_of_day_epoch, stata_time_of_day_delta) for f in stata_time_of_day_formats
+)
+
+const sas_tod_dt_formats = Dict{String, Tuple{Time, Period}}(
+    f => (time_of_day_epoch, sas_spss_time_of_day_delta) for f in sas_time_formats
+)
+
+const spss_tod_dt_formats = Dict{String, Tuple{Time, Period}}(
+    f => (time_of_day_epoch, sas_spss_time_of_day_delta) for f in spss_time_formats
+)
+
+const ext_time_of_day_dt_formats = Dict{String, Dict{String, Tuple{Time, Period}}}(
+    ".dta" => stata_tod_dt_formats,
+    ".sav" => spss_tod_dt_formats,
+    ".por" => spss_tod_dt_formats,
+    ".sas7bdat" => sas_tod_dt_formats,
+    ".xpt" => sas_tod_dt_formats
+)
+
+struct Num2DateTime{DT<:Union{DateTime, Date, Time}, P<:Period}
     epoch::DT
     delta::P
 end

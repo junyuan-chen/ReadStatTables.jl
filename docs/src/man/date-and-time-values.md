@@ -23,13 +23,16 @@ is sufficient for uncovering the represented date/time values for a given format
     Conversion for a variable with format `"%tw"` is therefore handled differently.
     For `"%ty"`, the recorded numerical values are simply the calendar years
     without any transformation.
-    A variable with format `"%ty"` is not converted to Julia `Date` or `DateTime`.
+    A variable with format `"%ty"` is not converted to Julia `Date`, `DateTime` or `Time`.
 
 If a variable is in a date/time format that can be recognized,
-the values will be displayed as Julia `Date` or `DateTime`
+the values will be displayed as Julia `Date`, `DateTime` or `Time`
 when printing a `ReadStatTable`.
+Time-of-day formats (SAS/SPSS `TIME*` and Stata `%tcHH:MM:SS`/`%tcHH:MM`)
+are translated to `Time`, while date-only formats translate to `Date`
+and date-with-time formats translate to `DateTime`.
 Notice that the underlying numerical values are preserved
-and the conversion to the Julia `Date` or `DateTime` happens only lazily
+and the conversion to the Julia `Date`, `DateTime` or `Time` happens only lazily
 via a [`MappedArray`](https://github.com/JuliaArrays/MappedArrays.jl)
 when working with a `ReadStatTable`.
 
@@ -39,6 +42,8 @@ tb = readstat("data/sample.dta")
 tb.mydate
 tb.mydate.data
 colmetadata(tb, :mydate, "format")
+tb.mytime
+colmetadata(tb, :mytime, "format")
 ```
 
 The variable-level metadata key named `format` informs

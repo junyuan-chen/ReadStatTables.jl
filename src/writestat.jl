@@ -147,25 +147,38 @@ function ReadStatTable(table, ext::AbstractString;
                 colmeta.format[i] = format = mformat
             end
         end
-        # Lazily convert any Date/DateTime column
-        if nonmissingtype(eltype(col)) ∈ (Date, DateTime) # Avoid Missing column
+        # Lazily convert any Date/DateTime/Time column
+        if nonmissingtype(eltype(col)) ∈ (Date, DateTime, Time) # Avoid Missing column
             copycols || error("to write tables with date/time columns, copycols must be true")
-            ext == ".dta" && (format = first(format, 3))
-            dtpara = get(dt_formats[ext], format, nothing)
-            if dtpara === nothing
-                if Date <: eltype(col)
-                    epoch = ext_date_epoch[ext]
-                    delta = ext_default_date_delta[ext]
-                    colmeta.format[i] = ext_default_date_format[ext]
-                else
-                    epoch = ext_time_epoch[ext]
-                    delta = ext_default_time_delta[ext]
-                    colmeta.format[i] = ext_default_time_format[ext]
-                end
+            # Time-of-day match uses the full format string so Stata "%tcHH:MM:SS"
+            # routes to a Time epoch before the family truncation hits
+            todpara = get(get(ext_time_of_day_dt_formats, ext, nothing), format, nothing)
+            if todpara !== nothing
+                epoch, delta = todpara
+                Time <: eltype(col) ||
+                    error("a Time column is required for a time-of-day format")
             else
-                epoch, delta = dtpara
-                nonmissingtype(eltype(col)) == typeof(epoch) ||
-                    error("a date/datetime column must have a date/datetime format")
+                ext == ".dta" && (format = first(format, 3))
+                dtpara = get(dt_formats[ext], format, nothing)
+                if dtpara === nothing
+                    if Date <: eltype(col)
+                        epoch = ext_date_epoch[ext]
+                        delta = ext_default_date_delta[ext]
+                        colmeta.format[i] = ext_default_date_format[ext]
+                    elseif DateTime <: eltype(col)
+                        epoch = ext_time_epoch[ext]
+                        delta = ext_default_time_delta[ext]
+                        colmeta.format[i] = ext_default_time_format[ext]
+                    else
+                        epoch = ext_time_of_day_epoch[ext]
+                        delta = ext_default_time_of_day_delta[ext]
+                        colmeta.format[i] = ext_default_time_of_day_format[ext]
+                    end
+                else
+                    epoch, delta = dtpara
+                    nonmissingtype(eltype(col)) == typeof(epoch) ||
+                        error("a date/datetime column must have a date/datetime format")
+                end
             end
             col = datetime2num(col, Num2DateTime(epoch, delta))
         end

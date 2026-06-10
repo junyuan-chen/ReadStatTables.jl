@@ -33,7 +33,7 @@ wrapping the C interface of ReadStat:
 - Fast multi-threaded data collection from ReadStat parsers to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible `ReadStatTable`
 - Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
 - Integration of value labels into data columns via a custom array type `LabeledArray`
-- Translation of date and time values into Julia time types `Date` and `DateTime`
+- Translation of date and time values into Julia time types `Date`, `DateTime` and `Time`
 - Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables (experimental)
 
 ## Supported File Formats

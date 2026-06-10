@@ -301,6 +301,10 @@ Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     # Construct MappedArray if format is a recognized date/time format
     format = _colmeta(tb, i, :format)
     ext = _meta(tb).file_ext
+    # Time-of-day match uses the full format string so Stata "%tcHH:MM:SS" hits
+    # before the family truncation collapses it to "%tc"
+    tod = get(get(ext_time_of_day_dt_formats, ext, nothing), format, nothing)
+    tod === nothing || return num2datetime(col, Num2DateTime(tod...))
     ext == ".dta" && (format = first(format, 3))
     dtpara = get(dt_formats[ext], format, nothing)
     return dtpara === nothing ? col : num2datetime(col, Num2DateTime(dtpara...))

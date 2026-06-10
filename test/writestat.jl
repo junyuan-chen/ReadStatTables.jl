@@ -230,4 +230,11 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
     r = readstat(datetimefile)
     @test r.DATE == datetime.DATE
     @test r.TIME == datetime.TIME
+
+    # Issue #68: Time-of-day columns
+    tod = DataFrame((ATM = [Time(8, 30), Time(12), Time(23, 59, 59), missing],))
+    todfile = "$(@__DIR__)/../data/test_write_time.$ext"
+    tb = writestat(todfile, tod)
+    r = readstat(todfile)
+    @test isequal(r.ATM, tod.ATM)
 end

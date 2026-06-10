@@ -76,4 +76,4 @@ tb[1,:dtime]
 Notice that for data columns with value labels,
 these methods only deal with the underlying values and disregard the value labels.
 Similarly, for data columns with a date/time format,
-the numerical values instead of the converted `Date`/`DateTime` values are returned.
+the numerical values instead of the converted `Date`/`DateTime`/`Time` values are returned.

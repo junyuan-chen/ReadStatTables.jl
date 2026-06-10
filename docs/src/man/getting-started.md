@@ -24,7 +24,7 @@ Some additional details to be noted:
 
 - If a variable contains any missing value, there is a question mark `?` in the displayed element type.
 - By default, all missing values are treated as [`missing`](https://docs.julialang.org/en/v1/manual/missing/), a special value in Julia.
-- The date and time values have been translated into `Date` and `DateTime` respectively.[^2]
+- The date and time values have been translated into `Date`, `DateTime` and `Time` respectively.[^2]
 - Labels instead of the numeric values are displayed for variables with value labels.
 - `Labeled{Int8}` is an abbreviation for [`LabeledValue{Int8}`](@ref).
 
@@ -231,4 +231,4 @@ ReadStatTable(table::ReadStatTable, ext::AbstractString; kwargs...)
 
 [^1]: The printed output is generated with [PrettyTables.jl](https://github.com/ronisbr/PrettyTables.jl).
 
-[^2]: The time types `Date` and `DateTime` are from the [Dates](https://docs.julialang.org/en/v1/stdlib/Dates/) module of Julia.
+[^2]: The time types `Date`, `DateTime` and `Time` are from the [Dates](https://docs.julialang.org/en/v1/stdlib/Dates/) module of Julia. Time-of-day variables (e.g., Stata `%tcHH:MM:SS`/`%tcHH:MM` and SAS/SPSS `TIME*` formats) are translated into `Time` rather than `DateTime`.
