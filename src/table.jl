@@ -301,9 +301,15 @@ Base.@propagate_inbounds function Tables.getcolumn(tb::ReadStatTable, i::Int)
     # Construct MappedArray if format is a recognized date/time format
     format = _colmeta(tb, i, :format)
     ext = _meta(tb).file_ext
-    ext == ".dta" && (format = first(format, 3))
+    isdta = ext == ".dta"
+    isdta && (format = first(format, 3)) # Ignore detail code that only affects display
     dtpara = get(dt_formats[ext], format, nothing)
-    return dtpara === nothing ? col : num2datetime(col, Num2DateTime(dtpara...))
+    dtpara === nothing || return num2datetime(col, Num2DateTime(dtpara...))
+    isdta && return col
+    # Handle pure time types in SAS/SPSS
+    istime = ext ∈ (".sav", ".por") ? is_spss_time_format(format) :
+        is_sas_time_format(format)
+    return istime ? HMSCol(col) : col
 end
 
 Base.@propagate_inbounds Tables.getcolumn(tb::ReadStatTable, n::Symbol) =

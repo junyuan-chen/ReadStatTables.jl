@@ -74,6 +74,43 @@ end
     @test isequal(tb.date.data, [missing, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, -1, -1, -1, -2])
 end
 
+@testset "writestat time" begin
+    df1 = DataFrame((TIME1 = [Time(1), Time(2,3), missing],
+        HMS1 = HMSCol([1.5, -2.3, missing]),
+        HMS2 = [HMS(1), HMS(-2), missing]))
+    for ext in [".por", ".sav", ".sas7bdat", ".xpt"]
+        outfile = "$(@__DIR__)/../data/test_time$(ext)"
+        tb1 = ReadStatTable(df1, ext)
+        for k in 1:3
+            @test tb1[k] isa HMSCol
+        end
+        @test eltype(refarray(tb1[1])) == Union{Float64,Missing}
+        @test isequal(refarray(tb1[1]), [3600.0, 7380.0, missing])
+        @test eltype(refarray(tb1[2])) == Union{Float64,Missing}
+        @test isequal(refarray(tb1[2]), [1.5, -2.3, missing])
+        @test eltype(refarray(tb1[3])) == Union{Int32,Missing}
+        @test isequal(refarray(tb1[3]), [1, -2, missing])
+        writestat(outfile, tb1)
+
+        colmetadata!(df1, :TIME1, "format", "WRONG"; style=:note)
+        colmetadata!(df1, :HMS1, "format", "TIME9"; style=:note)
+        tb1 = writestat(outfile, df1)
+        @test colmetadata(tb1, :TIME1, "format") == "TIME"
+        @test colmetadata(tb1, :HMS1, "format") == "TIME9"
+    end
+
+    outfile = "$(@__DIR__)/../data/test_time.dta"
+    @test_throws ErrorException ReadStatTable(df1, ".dta")
+    df2 = df1[!,2:3]
+    tb2 = ReadStatTable(df2, ".dta")
+    @test eltype(tb2[1]) == Union{Float64,Missing}
+    @test isequal(tb2[1], refarray(df2.HMS1))
+    @test eltype(tb2[2]) == Union{Int32,Missing}
+    @test isequal(tb2[2], refarray(df2.HMS2))
+    colmetadata!(df2, :HMS1, "format", "%tc"; style=:note)
+    @test_throws ErrorException ReadStatTable(df2, ".dta")
+end
+
 @testset "writestat string" begin
     outfile = "$(@__DIR__)/../data/test_string.dta"
     types = [String, String3, String7, String15, String31,
@@ -230,4 +267,15 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
     r = readstat(datetimefile)
     @test r.DATE == datetime.DATE
     @test r.TIME == datetime.TIME
+end
+
+@testset "writestat por" begin
+    # Check invalid var names (only matters for .por)
+    df1 = DataFrame((a=[1], aBc2=[2]))
+    outfile = "$(@__DIR__)/../data/test_por_name.por"
+    tb1 = writestat(outfile, df1)
+    @test columnnames(tb1) == [:A, :ABC2]
+
+    df2 = DataFrame((abcdefghi=[0],))
+    @test_throws ErrorException writestat(outfile, df2)
 end

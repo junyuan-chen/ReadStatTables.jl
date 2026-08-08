@@ -16,6 +16,7 @@ using Tables
 import DataAPI: defaultarray, refarray, unwrap, nrow, ncol,
     metadatasupport, colmetadatasupport,
     metadata, metadatakeys, metadata!, colmetadata, colmetadatakeys, colmetadata!
+import Dates: Time
 import Missings: disallowmissing
 import Tables: columnnames
 
@@ -34,6 +35,9 @@ export LabeledValue,
        getvaluelabels,
        convertvalue,
        valuelabels,
+
+       HMS,
+       HMSCol,
 
        ReadStatColumns,
        ChainedReadStatColumns,
