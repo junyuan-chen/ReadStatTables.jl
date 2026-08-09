@@ -78,5 +78,5 @@ end
     @test size(x1) == size(x)
 
     # HMSCol copy is still HMSCol
-    @test copy(x) == typeof(x)
+    @test typeof(copy(x)) == typeof(x)
 end
