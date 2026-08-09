@@ -64,8 +64,6 @@ end
     x = HMSCol([1e6, -1.2, 123.456, missing])
     @test refarray(x) === x.a
     @test refarray(view(x,1:2)) == view(x.a,1:2)
-    @test isequal(refarray(reshape(x,2,2)), reshape(x.a,2,2))
-    @test refarray(view(reshape(x,2,2),1:2)) == view(reshape(x.a,2,2),1:2)
 
     @test size(x) == (4,)
     @test IndexStyle(x) == IndexStyle(x.a)
@@ -78,4 +76,7 @@ end
     x1 = similar(x)
     @test typeof(x1) == typeof(x)
     @test size(x1) == size(x)
+
+    # HMSCol copy is still HMSCol
+    @test copy(x) == typeof(x)
 end

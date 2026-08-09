@@ -343,6 +343,18 @@ function Base.alignment(io::IO, t::HMS)
     return textwidth(first(s, i-1)), textwidth(SubString(s, i))
 end
 
+"""
+    HMSCol{T, A<:AbstractVector{T}} <: AbstractVector{HMS{T}}
+
+A column (vector) that lazily maps number of seconds to [`HMS`](@ref) for readability.
+
+`HMSCol` simply wraps a data column containing the numeric values
+so that any element retrieved is converted to [`HMS`](@ref) on the fly.
+The array of values underlying an `HMSCol`
+can be accessed via [`refarray`](@ref).
+Users are expected to convert the data column appropriately for further processing,
+as `HMSCol` is not intended for usage beyond a quick view of data on REPL.
+"""
 struct HMSCol{T, A<:AbstractVector{T}} <: AbstractVector{HMS{T}}
     a::A
     function HMSCol(a::AbstractVector{T}) where T
@@ -355,18 +367,12 @@ end
 """
     refarray(x::HMSCol)
     refarray(x::SubArray{<:Any, <:Any, <:HMSCol})
-    refarray(x::Base.ReshapedArray{<:Any, <:Any, <:HMSCol})
-    refarray(x::SubArray{<:Any, <:Any, <:Base.ReshapedArray{<:Any, <:Any, <:HMSCol}})
 
 Return the array of values underlying a [`HMSCol`](@ref).
 """
 refarray(x::HMSCol) = x.a
 refarray(x::SubArray{<:Any, <:Any, <:HMSCol}) =
     view(parent(x).a, x.indices...)
-refarray(x::Base.ReshapedArray{<:Any, <:Any, <:HMSCol}) =
-    reshape(parent(x).a, size(x))
-refarray(x::SubArray{<:Any, <:Any, <:Base.ReshapedArray{<:Any, <:Any, <:HMSCol}}) =
-    view(reshape(parent(parent(x)).a, size(parent(x))), x.indices...)
 
 Base.size(col::HMSCol) = size(refarray(col))
 Base.IndexStyle(::Type{<:HMSCol{T,A}}) where {T,A} = IndexStyle(A)

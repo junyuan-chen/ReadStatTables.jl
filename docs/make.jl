@@ -3,7 +3,7 @@ using ReadStatTables
 using CategoricalArrays
 using PooledArrays
 
-DocMeta.setdocmeta!(ReadStatTables, :DocTestSetup, :(using ReadStatTables, CategoricalArrays))
+DocMeta.setdocmeta!(ReadStatTables, :DocTestSetup, :(using ReadStatTables, CategoricalArrays, Dates))
 
 makedocs(
     modules = [ReadStatTables],
