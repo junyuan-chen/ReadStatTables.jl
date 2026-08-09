@@ -33,8 +33,8 @@ wrapping the C interface of ReadStat:
 - Fast multi-threaded data collection from ReadStat parsers to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible `ReadStatTable`
 - Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
 - Integration of value labels into data columns via a custom array type `LabeledArray`
-- Translation of date and time values into Julia time types `Date` and `DateTime`
-- Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables (experimental)
+- Translation of date and time values into Julia types `Date` and `DateTime` or a custom `HMS` type
+- Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables
 
 ## Supported File Formats
 
@@ -61,7 +61,7 @@ The main limitations to be addressed are the following:
 
 - Read support for SAS value labels is temporarily absent.
 - All missing values are represented by a single value `missing`.[^2]
-- Write support for the file formats is experimental and not fully developed.
+- Write support for the file formats is mostly complete but should be used with caution.
 
 [^1]:
 

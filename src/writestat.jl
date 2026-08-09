@@ -147,34 +147,68 @@ function ReadStatTable(table, ext::AbstractString;
                 colmeta.format[i] = format = mformat
             end
         end
+        isdta = ext == ".dta"
+        T = nonmissingtype(eltype(col))
+
         # Lazily convert any Date/DateTime column
-        if nonmissingtype(eltype(col)) ∈ (Date, DateTime) # Avoid Missing column
+        if T ∈ (Date, DateTime) # Avoid Missing column
             copycols || error("to write tables with date/time columns, copycols must be true")
-            ext == ".dta" && (format = first(format, 3))
+            isdta && (format = first(format, 3))
             dtpara = get(dt_formats[ext], format, nothing)
-            if dtpara === nothing
+            if dtpara === nothing # Use defaults when column format is not specified
                 if Date <: eltype(col)
                     epoch = ext_date_epoch[ext]
                     delta = ext_default_date_delta[ext]
                     colmeta.format[i] = ext_default_date_format[ext]
                 else
-                    epoch = ext_time_epoch[ext]
-                    delta = ext_default_time_delta[ext]
-                    colmeta.format[i] = ext_default_time_format[ext]
+                    epoch = ext_datetime_epoch[ext]
+                    delta = ext_default_datetime_delta[ext]
+                    colmeta.format[i] = ext_default_datetime_format[ext]
                 end
             else
                 epoch, delta = dtpara
-                nonmissingtype(eltype(col)) == typeof(epoch) ||
+                T == typeof(epoch) ||
                     error("a date/datetime column must have a date/datetime format")
             end
             col = datetime2num(col, Num2DateTime(epoch, delta))
         end
+
+        # Handle pure time columns
+        needtimeformat = false
+        if T == Time
+            isdta && error("Julia Time is not allowed when writing .dta file due to ambiguity; please convert to either DateTime or a numeric type")
+            needtimeformat = true
+            col = time2num(col)
+        elseif T <: HMS
+            # For Stata .dta, do not convert to %tc and just write number of seconds
+            # (No reliable way to tell whether the epoch date is actual data or not in ouput)
+            needtimeformat = !isdta
+            # Expect Float64 for element type but do not enforce the conversion here?
+            col = col isa HMSCol ? refarray(col) : unwrap.(col)
+            if isdta && format == "%tc"
+                error("HMS column with format %tc is not allowed for Stata .dta file")
+            end
+        end
+        if needtimeformat # Should never be true for .dta
+            if format != ""
+                istime = ext ∈ (".sav", ".por") ? is_spss_time_format(format) :
+                    is_sas_time_format(format)
+                if !istime
+                    @warn "Encountered invalid time format $format for $(names[i]); have changed to TIME automatically"
+                    colmeta.format[i] = "TIME"
+                end
+            else
+                colmeta.format[i] = "TIME"
+            end
+        end
+
+        T = nonmissingtype(eltype(col)) # col may have been redefined
         if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
             type = rstype(nonmissingtype(eltype(refarray(col))))
         elseif eltype(col) == Missing # Will write empty strings
             type = READSTAT_TYPE_STRING
         else
-            type = rstype(nonmissingtype(eltype(col)))
+            type = rstype(T)
         end
         colmeta.type[i] = colmetadata(table, i, "type", type)
         lblname = colmetadata(table, i, "vallabel", Symbol())
@@ -216,7 +250,6 @@ function ReadStatTable(table, ext::AbstractString;
                     # Cannot turn "" into String1
                     tarcol = fill("", M)
                 else
-                    T = nonmissingtype(eltype(col))
                     if T in (String3, String7, String15, String31,
                             String63, String127, String255)
                         tarcol = Vector{T}(undef, M)
@@ -228,7 +261,6 @@ function ReadStatTable(table, ext::AbstractString;
             if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
                 copyto!(tarcol, refarray(col))
             elseif eltype(col) != Missing
-                T = nonmissingtype(eltype(col))
                 if T <: InlineString || T == String
                     # missing is replaced by "" for string columns
                     tarcol .= T.(coalesce.(col, ""))
@@ -282,6 +314,22 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         end
     end
     return table
+end
+
+function _check_varname(tb::ReadStatTable, ext)
+    # Make violations to .por var name restrictions more obvious to users
+    if ext == ".por"
+        for (i, n) in enumerate(_names(tb))
+            n = string(n)
+            if length(n) > 8
+                error(".por file limits each variable name to 8 characters; encountered $n")
+            end
+            if any(islowercase, n)
+                @warn ".por file does not allow lowercase letter in variable names; have converted to uppercase automatically"
+                _names(tb)[i] = Symbol(uppercase.(n))
+            end
+        end
+    end
 end
 
 """
@@ -338,6 +386,8 @@ function writestat(filepath, table; ext = lowercase(splitext(filepath)[2]), kwar
     write_ext = get(ext2writer, ext, nothing)
     write_ext === nothing && throw(ArgumentError("file extension $ext is not supported"))
     tb = ReadStatTable(table, ext; kwargs...)
+    # .por has additional restrictions on var names
+    _check_varname(tb, ext)
     io = open(filepath, "w")
     _write(io, ext, write_ext, tb)
     return tb

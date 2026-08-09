@@ -190,8 +190,10 @@ for the printed value of `Date` in the above example.
 
 !!! warning
 
-    The write support is experimental and requires further testing.
-    Caution should be taken when writing the data files.
+    Caution should be taken when writing non-recoverable data to files.
+
+For SAS and SPSS, variables containing `Time` or `HMS` are handled automatically.
+See [Date and Time Values](@ref) for more details.
 
 ## More Options
 

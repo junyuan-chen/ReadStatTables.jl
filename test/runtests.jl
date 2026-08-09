@@ -19,6 +19,7 @@ using Tables: getcolumn
 
 const tests = [
     "LabeledArrays",
+    "datetime",
     "columns",
     "table",
     "readstat",
