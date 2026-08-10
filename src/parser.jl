@@ -212,16 +212,14 @@ function _handle_value_label!(val_labels, value, label, vallabels)
     if type == READSTAT_TYPE_STRING
         lbls = get!(Dict{Union{String,Char},String}, vallabels, lblname)
         val = value_is_tagged_missing(value) ? value_tag(value) : _string(string_value(value))
-        lbls[val] = _string(label)
     elseif Int(type) <= 3
         lbls = get!(Dict{Union{Int32,Char},String}, vallabels, lblname)
         val = value_is_tagged_missing(value) ? value_tag(value) : int32_value(value)
-        lbls[val] = _string(label)
     else
         lbls = get!(Dict{Union{Float64,Char},String}, vallabels, lblname)
         val = value_is_tagged_missing(value) ? value_tag(value) : double_value(value)
-        lbls[val] = _string(label)
     end
+    lbls[val] = _string(label)
     return READSTAT_HANDLER_OK
 end
 

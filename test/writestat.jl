@@ -200,7 +200,8 @@ end
     @test Int.(colmetavalues(tb, :storage_width)) ==
         [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 64, 127, 128, 255, 256]
     df = DataFrame(strtype)
-    tb2 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", df)
+    outfile = "$(@__DIR__)/../data/write_df_stringtypes.dta"
+    tb2 = writestat(outfile, df)
     # PooledArray is treated as LabeledArray
     @test all(colmetavalues(tb2, :type)[1:10].==READSTAT_TYPE_STRING)
     @test all(colmetavalues(tb2, :type)[11:15].==READSTAT_TYPE_INT32)
@@ -209,8 +210,11 @@ end
     @test all(i->isequal(getcolumn(tb2,i), getcolumn(strtype,i)), 1:10)
     emptymetadata!(df)
     emptycolmetadata!(df)
-    tb3 = writestat("$(@__DIR__)/../data/write_df_stringtypes.dta", df)
+    tb3 = writestat(outfile, df)
     @test all(i->isequal(getcolumn(tb3,i), getcolumn(strtype,i)), 1:10)
+
+    df[!,:lblstr] = LabeledArray(df.vstr1, Dict{Union{String,Char},String}("a"=>"A"))
+    @test_throws ErrorException writestat(outfile, df)
 end
 
 extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
@@ -269,13 +273,33 @@ extensions = ["dta", "por", "sav", "sas7bdat", "xpt"]
     @test r.TIME == datetime.TIME
 end
 
-@testset "writestat por" begin
+@testset "writestat por sav" begin
     # Check invalid var names (only matters for .por)
     df1 = DataFrame((a=[1], aBc2=[2]))
     outfile = "$(@__DIR__)/../data/test_por_name.por"
     tb1 = writestat(outfile, df1)
     @test columnnames(tb1) == [:A, :ABC2]
+    # Old key should have been deleted
+    @test !haskey(_lookup(tb1), :a)
+    @test tb1.A == df1.a
 
-    df2 = DataFrame((abcdefghi=[0],))
-    @test_throws ErrorException writestat(outfile, df2)
+    for ext in (".por", ".sav")
+        df2 = DataFrame((LBLSTR=
+            LabeledArray(["a"], Dict{Union{String,Char},String}("a"=>"A")),
+            LBLSTR3=LabeledArray([String3("a")],
+            Dict{Union{String3,Char},String}(String3("a")=>"A")),
+            LBLCHAR=LabeledArray(['a'], Dict{Char,String}('a'=>"A"))))
+        outfile1 = "$(@__DIR__)/../data/test_labeledstring$(ext)"
+        writestat(outfile1, df2)
+        tb = readstat(outfile1)
+        @test tb.LBLSTR isa typeof(df2.LBLSTR)
+        @test tb.LBLSTR3 isa typeof(df2.LBLSTR)
+        @test tb.LBLCHAR isa typeof(df2.LBLSTR)
+        df2[!,:LBLWRONG] = LabeledArray([Time(1)],
+            Dict{Union{Time,Char},String}(Time(1)=>"A"))
+        @test_throws ErrorException writestat(outfile1, df2)
+    end
+
+    df3 = DataFrame((abcdefghi=[0],))
+    @test_throws ErrorException writestat(outfile, df3)
 end
