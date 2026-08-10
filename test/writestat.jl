@@ -293,8 +293,11 @@ end
         writestat(outfile1, df2)
         tb = readstat(outfile1)
         @test tb.LBLSTR isa typeof(df2.LBLSTR)
+        @test tb.LBLSTR == df2.LBLSTR
         @test tb.LBLSTR3 isa typeof(df2.LBLSTR)
+        @test tb.LBLSTR3 == df2.LBLSTR
         @test tb.LBLCHAR isa typeof(df2.LBLSTR)
+        @test tb.LBLCHAR == df2.LBLSTR
         df2[!,:LBLWRONG] = LabeledArray([Time(1)],
             Dict{Union{Time,Char},String}(Time(1)=>"A"))
         @test_throws ErrorException writestat(outfile1, df2)
