@@ -52,8 +52,8 @@ wrapping the C interface of ReadStat:
 - Fast multi-threaded data collection from ReadStat parsers to a [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible `ReadStatTable`
 - Interface of file-level and variable-level metadata compatible with [DataAPI.jl](https://github.com/JuliaData/DataAPI.jl)
 - Integration of value labels into data columns via a custom array type `LabeledArray`
-- Translation of date and time values into Julia time types `Date` and `DateTime`
-- Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables (experimental)
+- Translation of date and time values into Julia types `Date` and `DateTime` or a custom `HMS` type
+- Write support for [Tables.jl](https://github.com/JuliaData/Tables.jl)-compatible tables
 
 ## Supported File Formats
 
@@ -106,9 +106,9 @@ julia> tb.myord
 
 Notice that for data variables with value labels,
 both the original values and the value labels are preserved.
-For variables representing date/time,
-the translation to Julia `Date`/`DateTime` is lazy.
-One can access the underlying numerical values as follows:
+For variables representing date or datetime,
+the translation to Julia `Date` or `DateTime` is lazy.
+One can access the underlying numeric values as follows:
 
 ```julia
 julia> tb.mydate.data

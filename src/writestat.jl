@@ -368,7 +368,7 @@ after the writer finishes.
 # Conversion
 
 For data values, Julia objects are converted to the closest `ReadStat` type
-for either numerical values or strings.
+for either numeric values or strings.
 However, depending on the file format of the output file,
 a data column may be written in a different type
 when the closest `ReadStat` type is not supported.
@@ -380,6 +380,7 @@ via the `metadata` and `colmetadata` interface defined by `DataAPI.jl`.
 If the `table` is a [`ReadStatTable`](@ref),
 then the associated metadata will be written as long as their values
 are compatible with the format of the output file.
+
 Value labels associated with a [`LabeledArray`](@ref) are always preserved
 even when the name of the dictionary of value labels is not specified in metadata
 (column name will be used by default).
@@ -387,8 +388,13 @@ If a column is of an array type that makes use of `DataAPI.refpool`
 (e.g., `CategoricalArray` and `PooledArray`),
 value labels will be generated automatically by default
 (with keyword `refpoolaslabel` set to be `true`)
-and the underlying numerical reference values instead of the values returned by `getindex`
+and the underlying numeric reference values instead of the values returned by `getindex`
 are written to files (with value labels attached).
+
+Columns containing `DateTime` or `Date` are converted to numeric values
+based on the file extension of the output file.
+For SAS and SPSS files, (pure) time variables containing `Time` or `HMS`
+are handled automatically.
 """
 function writestat(filepath, table; ext = lowercase(splitext(filepath)[2]), kwargs...)
     filepath = string(filepath)
