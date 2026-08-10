@@ -26,6 +26,8 @@ const default_file_format_version = Dict{String, Int}(
 
 # Accepted maximum length for strings varies by the file format and version
 function _readstat_string_width(col)
+    # Allow LabeledArray with string/char values
+    col = eltype(col) <: LabeledValue ? refarray(col) : col
     if eltype(col) == Missing
         return Csize_t(1)
     elseif nonmissingtype(eltype(col)) <: InlineString
@@ -202,13 +204,12 @@ function ReadStatTable(table, ext::AbstractString;
             end
         end
 
-        T = nonmissingtype(eltype(col)) # col may have been redefined
         if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
             type = rstype(nonmissingtype(eltype(refarray(col))))
         elseif eltype(col) == Missing # Will write empty strings
             type = READSTAT_TYPE_STRING
         else
-            type = rstype(T)
+            type = rstype(nonmissingtype(eltype(col)))
         end
         colmeta.type[i] = colmetadata(table, i, "type", type)
         lblname = colmetadata(table, i, "vallabel", Symbol())
@@ -233,6 +234,7 @@ function ReadStatTable(table, ext::AbstractString;
         end
         colmeta.measure[i] = READSTAT_MEASURE_UNKNOWN
         colmeta.alignment[i] = READSTAT_ALIGNMENT_UNKNOWN
+        T = nonmissingtype(eltype(refarray(col)))
         if copycols
             M = length(col)
             if type == READSTAT_TYPE_INT8
@@ -259,7 +261,11 @@ function ReadStatTable(table, ext::AbstractString;
                 end
             end
             if col isa LabeledArrOrSubOrReshape || refpool(col) !== nothing && refpoolaslabel
-                copyto!(tarcol, refarray(col))
+                if T == Char
+                    tarcol .= string.(refarray(col))
+                else
+                    copyto!(tarcol, refarray(col))
+                end
             elseif eltype(col) != Missing
                 if T <: InlineString || T == String
                     # missing is replaced by "" for string columns
@@ -320,13 +326,16 @@ function _check_varname(tb::ReadStatTable, ext)
     # Make violations to .por var name restrictions more obvious to users
     if ext == ".por"
         for (i, n) in enumerate(_names(tb))
-            n = string(n)
-            if length(n) > 8
+            varname = string(n)
+            if length(varname) > 8
                 error(".por file limits each variable name to 8 characters; encountered $n")
             end
-            if any(islowercase, n)
+            if any(islowercase, varname)
                 @warn ".por file does not allow lowercase letter in variable names; have converted to uppercase automatically"
-                _names(tb)[i] = Symbol(uppercase.(n))
+                newname = Symbol(uppercase.(varname))
+                _names(tb)[i] = newname
+                delete!(_lookup(tb), n)
+                _lookup(tb)[newname] = i
             end
         end
     end

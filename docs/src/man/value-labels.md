@@ -39,6 +39,11 @@ is not equivalent to that of an array type designed for categorical data
 [CategoricalArrays.jl](https://github.com/JuliaData/CategoricalArrays.jl)).
 They are not complete substitutes for each other.
 
+!!! info
+
+    Stata only allows assigning value labels to numeric variables.
+    SAS and SPSS additionally allow value labels assigned to string variables.
+
 More details are below:
 
 ```@docs

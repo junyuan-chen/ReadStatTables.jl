@@ -308,6 +308,14 @@ end
     @test m.notes == ["some test text as notes", "   (Entered 15-Aug-2018)",
         "some other comments", "   (Entered 15-Aug-2018)"]
     @test m.file_ext == ".sav"
+
+    # Test for string values, #52
+    sav2 = "$(@__DIR__)/../data/string_labeled_value.sav"
+    d2 = readstat(sav2)
+    @test eltype(d2[1]) == LabeledValue{String, Union{Char, String}}
+    @test refarray(d2[1]) == ["BE33", "BE35"]
+    @test valuelabels(d2[1]) == ["Prov. Liege", "Prov. Namur"]
+
 end
 
 @testset "readstat por" begin

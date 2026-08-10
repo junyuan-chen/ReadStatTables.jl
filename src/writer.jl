@@ -1,30 +1,35 @@
 handle_write(data::Ptr{UInt8}, len::Csize_t, ctx::IOStream) =
     Cssize_t(unsafe_write(ctx, data, len))
 
-function _write_value_label(writer, vallabels)
+function _write_value_label(writer, vallabels, ext)
     label_sets = Dict{Symbol, Ptr{Cvoid}}()
     for (lblname, lbls) in vallabels
-        if keytype(lbls) == Union{Float64, Char}
-            label_set = add_label_set(writer, READSTAT_TYPE_DOUBLE, lblname)
-            for (val, lbl) in lbls
-                if val isa Float64
-                    label_double_value(label_set, val, lbl)
-                else
-                    label_tagged_value(label_set, val, lbl)
-                end
-            end
-            label_sets[lblname] = label_set
-        elseif keytype(lbls) == Union{Int32, Char}
-            label_set = add_label_set(writer, READSTAT_TYPE_INT32, lblname)
-            for (val, lbl) in lbls
-                if val isa Int32
-                    label_int32_value(label_set, val, lbl)
-                else
-                    label_tagged_value(label_set, val, lbl)
-                end
-            end
-            label_sets[lblname] = label_set
+        # Key type of lbls is expected to be Union{T,Char} for some accepted T
+        # Extract the part of key type other than Char
+        T = Base.typesplit(keytype(lbls), Char)
+        # T is Union{} if value labels are for Char (will be converted to String)
+        if T <: AbstractFloat && T != Union{}
+            readstattype = READSTAT_TYPE_DOUBLE
+            labelvalue = label_double_value
+        elseif T <: Integer && T != Union{}
+            readstattype = READSTAT_TYPE_INT32
+            labelvalue = label_int32_value
+        else
+            # T should be string/char as otherwise rstype should already raise error
+            T <: AbstractString || error("Value label set $lblname has unaccepted key type")
+            ext == ".dta" && error("Stata does not allow value labels for string variables")
+            readstattype = READSTAT_TYPE_STRING
+            labelvalue = label_string_value
         end
+        label_set = add_label_set(writer, readstattype, lblname)
+        for (val, lbl) in lbls
+            if val isa T
+                labelvalue(label_set, val, lbl)
+            else
+                label_tagged_value(label_set, val, lbl)
+            end
+        end
+        label_sets[lblname] = label_set
     end
     return label_sets
 end
@@ -106,7 +111,7 @@ function _write(io::IOStream, ext, write_ext, tb)
     meta = _meta(tb)
     colmeta = _colmeta(tb)
     try
-        label_sets = _write_value_label(writer, getvaluelabels(tb))
+        label_sets = _write_value_label(writer, getvaluelabels(tb), ext)
         for (i, name) in enumerate(_names(tb))
             type = colmeta.type[i]
             width = colmeta.storage_width[i]

@@ -207,18 +207,19 @@ end
 function _handle_value_label!(val_labels, value, label, vallabels)
     lblname = Symbol(_string(val_labels))
     type = value_type(value)
-    # String variables do not have value labels
     # All integers are Int32 and all floats are Float64 (ReadStat handles type conversion)
     # Tentatively save tagged missing values as Char
-    if Int(type) <= 3
+    if type == READSTAT_TYPE_STRING
+        lbls = get!(Dict{Union{String,Char},String}, vallabels, lblname)
+        val = value_is_tagged_missing(value) ? value_tag(value) : _string(string_value(value))
+    elseif Int(type) <= 3
         lbls = get!(Dict{Union{Int32,Char},String}, vallabels, lblname)
         val = value_is_tagged_missing(value) ? value_tag(value) : int32_value(value)
-        lbls[val] = _string(label)
     else
         lbls = get!(Dict{Union{Float64,Char},String}, vallabels, lblname)
         val = value_is_tagged_missing(value) ? value_tag(value) : double_value(value)
-        lbls[val] = _string(label)
     end
+    lbls[val] = _string(label)
     return READSTAT_HANDLER_OK
 end
 

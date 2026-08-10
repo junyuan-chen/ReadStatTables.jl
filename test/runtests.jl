@@ -11,7 +11,7 @@ using ReadStatTables: error_message, READSTAT_COMPRESS_NONE, READSTAT_ENDIAN_NON
     READSTAT_TYPE_STRING, READSTAT_TYPE_INT8, READSTAT_TYPE_INT32,
     READSTAT_TYPE_DOUBLE, READSTAT_MEASURE_UNKNOWN,
     READSTAT_ALIGNMENT_UNKNOWN, READSTAT_ERROR_OPEN, _error,
-    Int8Column, _pushmissing!, _pushchain!, _setntasks, rstype
+    Int8Column, _pushmissing!, _pushchain!, _setntasks, rstype, _lookup
 using SentinelArrays: SentinelArray, SentinelVector, ChainedVector
 using StructArrays: StructVector
 using Tables

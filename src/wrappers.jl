@@ -299,6 +299,10 @@ label_int32_value(label_set::Ptr{Cvoid}, value::Integer, label::AbstractString) 
     ccall((:readstat_label_int32_value, libreadstat),
         Cvoid, (Ptr{Cvoid}, Int32, Cstring), label_set, value, label)
 
+label_string_value(label_set::Ptr{Cvoid}, value::AbstractString, label::AbstractString) =
+    ccall((:readstat_label_string_value, libreadstat),
+        Cvoid, (Ptr{Cvoid}, Cstring, Cstring), label_set, value, label)
+
 label_tagged_value(label_set::Ptr{Cvoid}, tag::Char, label::AbstractString) =
     ccall((:readstat_label_tagged_value, libreadstat),
         Cvoid, (Ptr{Cvoid}, Cchar, Cstring), label_set, tag, label)
