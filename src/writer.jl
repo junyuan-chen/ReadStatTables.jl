@@ -118,6 +118,15 @@ function _write(io::IOStream, ext, write_ext, tb)
             var = add_variable(writer, name, type, width)
             variable_set_label(var, colmeta.label[i])
             format = colmeta.format[i]
+            if format == ""
+                # This enforces a default format based on storage width
+                if ext ∈ (".por", ".sav") && type == READSTAT_TYPE_STRING
+                    format = string("A", width)
+                    variable_set_format(var, format)
+                end
+            else
+                variable_set_format(var, format)
+            end
             format == "" || variable_set_format(var, format)
             label_set = get(label_sets, colmeta.vallabel[i], nothing)
             label_set === nothing || variable_set_label_set(var, label_set)
