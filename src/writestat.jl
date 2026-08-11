@@ -25,12 +25,12 @@ const default_file_format_version = Dict{String, Int}(
 )
 
 # Accepted maximum length for strings varies by the file format and version
-function _readstat_string_width(col)
+function _readstat_string_width(col, scaninlinestring)
     # Allow LabeledArray with string/char values
     col = eltype(col) <: LabeledValue ? refarray(col) : col
     if eltype(col) == Missing
         return Csize_t(1)
-    elseif nonmissingtype(eltype(col)) <: InlineString
+    elseif !scaninlinestring && nonmissingtype(eltype(col)) <: InlineString
         return Csize_t(sizeof(eltype(col))-1)
     elseif nonmissingtype(eltype(col)) == Char
         return Csize_t(1)
@@ -93,6 +93,7 @@ A column with element type `Missing` is treated as a column with empty strings.
 - `meta::ReadStatMeta = ReadStatMeta()`: file-level metadata.
 - `colmeta::ColMetaVec = ReadStatColMetaVec()`: variable-level metadata stored in a `StructArray` of `ReadStatColMeta`s; values are always overwritten.
 - `varformat::Union{Dict{Symbol,String}, Nothing} = nothing`: specify variable-level format for certain variables with the key being the variable name (as `Symbol`) and value being the format string.
+- `scaninlinestring = true`: check the actual maximum length of any inline string column instead of using the maximum allowed by the string type.
 - `styles::Dict{Symbol, Symbol} = _default_metastyles()`: metadata styles.
 - `maxdispwidth::Integer = 60`: maximum `display_width` set for any variable.
 """
@@ -104,6 +105,7 @@ function ReadStatTable(table, ext::AbstractString;
         meta::ReadStatMeta = ReadStatMeta(),
         colmeta::ColMetaVec = ReadStatColMetaVec(),
         varformat::Union{Dict{Symbol,String}, Nothing} = nothing,
+        scaninlinestring::Bool = true,
         styles::Dict{Symbol, Symbol} = _default_metastyles(),
         maxdispwidth::Integer = 60,
         kwargs...)
@@ -218,7 +220,7 @@ function ReadStatTable(table, ext::AbstractString;
         # type may have been modified based on refarray
         type = colmeta.type[i]
         if type === READSTAT_TYPE_STRING
-            width = _readstat_string_width(col)
+            width = _readstat_string_width(col, scaninlinestring)
         elseif type === READSTAT_TYPE_DOUBLE
             # Only needed for .xpt files
             width = Csize_t(8)
@@ -290,9 +292,10 @@ for a supported file format with extension `ext`.
 
 # Keywords
 - `update_width::Bool = true`: determine the storage width for each string variable by checking the actual data columns instead of any existing metadata value.
+- `scaninlinestring = true`: check the actual maximum length of any inline string column instead of using the maximum allowed by the string type.
 """
 function ReadStatTable(table::ReadStatTable, ext::AbstractString;
-        update_width::Bool = true, kwargs...)
+        update_width::Bool = true, scaninlinestring = true, kwargs...)
     meta = _meta(table)
     meta.row_count = nrow(table)
     meta.var_count = ncol(table)
@@ -312,7 +315,7 @@ function ReadStatTable(table::ReadStatTable, ext::AbstractString;
         if update_width
             type = colmeta.type[i]
             if type === READSTAT_TYPE_STRING
-                colmeta.storage_width[i] = _readstat_string_width(col)
+                colmeta.storage_width[i] = _readstat_string_width(col, scaninlinestring)
             elseif type === READSTAT_TYPE_DOUBLE
                 # Only needed for .xpt files
                 colmeta.storage_width[i] = Csize_t(8)

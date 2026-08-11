@@ -118,7 +118,7 @@ end
     cols = [Symbol(:col, i) => T[T("a")] for (i, T) in enumerate(types)]
     df = DataFrame((; cols...))
     df[!,:col0] .= 'a'
-    tb = writestat(outfile, df)
+    tb = writestat(outfile, df; scaninlinestring=false)
     push!(types, String)
     for (i, col) in enumerate(tb)
         @test eltype(col) == types[i]
@@ -132,7 +132,7 @@ end
     for col in eachcol(df)
         push!(col, missing)
     end
-    tb = writestat(outfile, df)
+    tb = writestat(outfile, df; scaninlinestring=false)
     push!(types, String)
     for (i, col) in enumerate(tb)
         @test eltype(col) == types[i]
@@ -198,10 +198,15 @@ end
     tb = writestat("$(@__DIR__)/../data/write_stringtypes.dta", strtype)
     @test isequal(tb, strtype)
     @test Int.(colmetavalues(tb, :storage_width)) ==
+        [1, 3, 4, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 255, 256]
+    tb = writestat("$(@__DIR__)/../data/write_stringtypes.dta", strtype;
+        scaninlinestring=false)
+    @test isequal(tb, strtype)
+    @test Int.(colmetavalues(tb, :storage_width)) ==
         [3, 3, 7, 7, 15, 15, 31, 31, 32, 63, 64, 127, 128, 255, 256]
     df = DataFrame(strtype)
     outfile = "$(@__DIR__)/../data/write_df_stringtypes.dta"
-    tb2 = writestat(outfile, df)
+    tb2 = writestat(outfile, df; scaninlinestring=false)
     # PooledArray is treated as LabeledArray
     @test all(colmetavalues(tb2, :type)[1:10].==READSTAT_TYPE_STRING)
     @test all(colmetavalues(tb2, :type)[11:15].==READSTAT_TYPE_INT32)
@@ -296,8 +301,10 @@ end
         @test tb.LBLSTR == df2.LBLSTR
         @test tb.LBLSTR3 isa typeof(df2.LBLSTR)
         @test tb.LBLSTR3 == df2.LBLSTR
+        @test colmetadata(tb, :LBLSTR3, "format") == "A1"
         @test tb.LBLCHAR isa typeof(df2.LBLSTR)
         @test tb.LBLCHAR == df2.LBLSTR
+        @test colmetadata(tb, :LBLCHAR, "format") == "A1"
         df2[!,:LBLWRONG] = LabeledArray([Time(1)],
             Dict{Union{Time,Char},String}(Time(1)=>"A"))
         @test_throws ErrorException writestat(outfile1, df2)
